@@ -3,47 +3,114 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>米福壽司 - 門市 POS 接單後台</title>
+  <title>米福壽司 - POS 接單與營業額報表系統</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
     body { background-color: #1e1e24; color: #fff; margin: 0; padding: 20px; }
     .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
     .header h1 { margin: 0; font-size: 24px; color: #ff4d4f; }
-    .status-badge { background: #2b2b36; padding: 6px 12px; border-radius: 20px; font-size: 13px; border: 1px solid #444; }
-    .btn-audio { background: #ff4d4f; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-left: 10px; font-weight: bold; transition: 0.3s; }
+    .btn-audio { background: #ff4d4f; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-left: 10px; font-weight: bold; }
     .btn-audio.active { background: #52c41a; }
+    
+    /* 報表控制區 */
+    .report-section { background: #2b2b36; border-radius: 10px; padding: 20px; margin-bottom: 25px; border: 1px solid #3d3d4e; }
+    .report-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .date-picker { background: #1e1e24; color: #fff; border: 1px solid #555; padding: 8px 12px; border-radius: 6px; font-size: 16px; }
+    
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .stat-card { background: #1e1e24; border-radius: 8px; padding: 15px; border-left: 4px solid #888; }
+    .stat-card.total { border-color: #4caf50; }
+    .stat-card.panda { border-color: #ff2b56; }
+    .stat-card.online { border-color: #1890ff; }
+    .stat-card.pos { border-color: #fa8c16; }
+    .stat-title { font-size: 12px; color: #aaa; margin-bottom: 5px; }
+    .stat-value { font-size: 22px; font-weight: bold; }
+
+    /* 每日營業額表格 */
+    .table-container { max-height: 250px; overflow-y: auto; background: #1e1e24; border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid #333; }
+    th { background-color: #333342; position: sticky; top: 0; color: #ddd; }
+    
+    /* 訂單卡片區 */
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
     .card { background: #2b2b36; border-radius: 10px; border: 1px solid #3d3d4e; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; }
     .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3d3d4e; padding-bottom: 8px; margin-bottom: 10px; }
-    .order-id { font-weight: bold; color: #ff4d4f; font-size: 14px; }
+    .order-id { font-weight: bold; color: #ff4d4f; }
     .order-type { font-size: 12px; padding: 2px 8px; border-radius: 4px; font-weight: bold; background: #e6f7ff; color: #1890ff; }
-    .order-type.外送 { background: #fff7e6; color: #fa8c16; }
-    .order-type.預約取餐 { background: #f6ffed; color: #52c41a; }
+    .order-type.熊貓外送 { background: #ffe6eb; color: #ff2b56; }
+    .order-type.門市POS散點 { background: #fff7e6; color: #fa8c16; }
     .cust-info { font-size: 14px; margin-bottom: 10px; line-height: 1.5; color: #ddd; }
-    .items-box { background: #1e1e24; border-radius: 6px; padding: 10px; margin-bottom: 10px; max-height: 150px; overflow-y: auto; font-size: 13px; }
+    .items-box { background: #1e1e24; border-radius: 6px; padding: 10px; margin-bottom: 10px; max-height: 120px; overflow-y: auto; font-size: 13px; }
     .item-row { display: flex; justify-content: space-between; border-bottom: 1px dashed #333; padding: 4px 0; }
-    .item-row:last-child { border-bottom: none; }
-    .note-box { font-size: 12px; color: #ffc107; background: #3a321d; padding: 6px 10px; border-radius: 4px; margin-bottom: 10px; }
-    .total { text-align: right; font-size: 16px; font-weight: bold; color: #ff4d4f; margin-bottom: 12px; }
+    .total { text-align: right; font-size: 16px; font-weight: bold; color: #ff4d4f; margin-bottom: 10px; }
     .actions { display: flex; gap: 8px; }
-    .btn { flex: 1; padding: 8px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 13px; }
+    .btn { flex: 1; padding: 8px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
     .btn-accept { background: #52c41a; color: white; }
     .btn-complete { background: #1890ff; color: white; }
     .btn-cancel { background: #555; color: white; }
-    .btn:active { opacity: 0.8; }
   </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>米福壽司 POS 接單系統</h1>
+  <h1>米福壽司 POS 接單與營收統計</h1>
   <div>
-    <span class="status-badge" id="listenStatus">⚡ 自動監聽中</span>
-    <button id="audioBtn" class="btn-audio" onclick="enableAudio()">🔔 點擊開啟音效 (測試音檔)</button>
+    <span id="listenStatus" style="font-size:13px; color:#aaa;">⚡ 自動監聽中</span>
+    <button id="audioBtn" class="btn-audio" onclick="enableAudio()">🔔 點擊開啟音效</button>
   </div>
 </div>
 
+<!-- 📊 營收統計與日期篩選區 -->
+<div class="report-section">
+  <div class="report-header">
+    <h2 style="margin:0; font-size:18px;">📈 營業額統計報表</h2>
+    <div>
+      <label style="font-size:14px; color:#ccc; margin-right:8px;">選擇查看月份：</label>
+      <input type="month" id="monthPicker" class="date-picker" onchange="renderReport()">
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card total">
+      <div class="stat-title">當月總營業額</div>
+      <div class="stat-value" id="statTotal" style="color:#4caf50;">$0</div>
+    </div>
+    <div class="stat-card panda">
+      <div class="stat-title">🐼 熊貓 (Foodpanda)</div>
+      <div class="stat-value" id="statPanda" style="color:#ff2b56;">$0</div>
+    </div>
+    <div class="stat-card online">
+      <div class="stat-title">🌐 線上點餐 / 外帶預約</div>
+      <div class="stat-value" id="statOnline" style="color:#1890ff;">$0</div>
+    </div>
+    <div class="stat-card pos">
+      <div class="stat-title">🏪 門市 POS 現場散點</div>
+      <div class="stat-value" id="statPos" style="color:#fa8c16;">$0</div>
+    </div>
+  </div>
+
+  <!-- 每日營業額明細表 -->
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>日期 (年月日)</th>
+          <th>🐼 熊貓外送</th>
+          <th>🌐 線上/外帶</th>
+          <th>🏪 POS 散點</th>
+          <th>當日小計</th>
+        </tr>
+      </thead>
+      <tbody id="dailyTableBody">
+        <tr><td colspan="5" style="text-align:center; color:#888;">載入資料中...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<h2 style="font-size:18px; margin-bottom:15px;">📋 即時訂單列表</h2>
 <div class="grid" id="ordersGrid">
   <div style="color: #888;">正在載入訂單...</div>
 </div>
@@ -53,51 +120,45 @@
   const SUPABASE_KEY = 'sb_publishable_m7MorN4F4WnGngacYoqSWQ_fPP0zVyv';
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+  let allOrders = [];
   let audioCtx = null;
   let knownOrderIds = new Set();
   let isFirstLoad = true;
   let audioEnabled = false;
 
-  function enableAudio() {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  // 初始化預設為「這個月」
+  const today = new Date();
+  const currentMonthStr = today.toISOString().substring(0, 7); // YYYY-MM
+  document.getElementById('monthPicker').value = currentMonthStr;
+
+  async function enableAudio() {
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') await audioCtx.resume();
+      audioEnabled = true;
+      const btn = document.getElementById('audioBtn');
+      btn.classList.add('active');
+      btn.innerText = '🔔 音效已開啟';
+      playBeep();
+    } catch (e) {
+      alert('音效開啟失敗: ' + e.message);
     }
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
-    audioEnabled = true;
-    const btn = document.getElementById('audioBtn');
-    btn.classList.add('active');
-    btn.innerText = '🔔 音效已開啟 (運作中)';
-    playBeep(); // 點擊時立即測試發音
   }
 
   function playBeep() {
     if (!audioCtx || !audioEnabled) return;
     try {
       const now = audioCtx.currentTime;
-      // 第一聲高音
-      const osc1 = audioCtx.createOscillator();
-      const gain1 = audioCtx.createGain();
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(880, now); 
-      osc1.connect(gain1);
-      gain1.connect(audioCtx.destination);
-      osc1.start(now);
-      osc1.stop(now + 0.15);
-
-      // 第二聲更高音 (叮咚聲)
-      const osc2 = audioCtx.createOscillator();
-      const gain2 = audioCtx.createGain();
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(1046.5, now + 0.2); 
-      osc2.connect(gain2);
-      gain2.connect(audioCtx.destination);
-      osc2.start(now + 0.2);
-      osc2.stop(now + 0.4);
-    } catch (e) {
-      console.error('播放音效失敗:', e);
-    }
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      gain.gain.setValueAtTime(0.5, now);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    } catch (e) {}
   }
 
   async function fetchOrders() {
@@ -108,23 +169,97 @@
 
     if (error) return console.error(error);
 
-    // 比對是否有新寫入的 Pending 訂單
+    allOrders = orders || [];
+
+    // 新訂單檢測
     let hasNewOrder = false;
-    orders.forEach(order => {
+    allOrders.forEach(order => {
       if (!knownOrderIds.has(order.id)) {
         knownOrderIds.add(order.id);
-        if (!isFirstLoad && order.status === 'Pending') {
-          hasNewOrder = true;
+        if (!isFirstLoad && order.status === 'Pending') hasNewOrder = true;
+      }
+    });
+
+    if (hasNewOrder) playBeep();
+    isFirstLoad = false;
+
+    renderOrders(allOrders);
+    renderReport(); // 更新統計報表
+  }
+
+  // 📊 渲染統計報表與每日列表
+  function renderReport() {
+    const selectedMonth = document.getElementById('monthPicker').value; // YYYY-MM
+    if (!selectedMonth) return;
+
+    let totalMonth = 0;
+    let pandaMonth = 0;
+    let onlineMonth = 0;
+    let posMonth = 0;
+
+    // 用物件來按「YYYY-MM-DD」歸類每日金額
+    const dailyMap = {};
+
+    allOrders.forEach(order => {
+      if (order.status === 'Cancelled' || order.status === 'cancelled') return;
+
+      const createdAt = new Date(order.created_at);
+      const dateStr = createdAt.toISOString().split('T')[0]; // YYYY-MM-DD
+      const monthStr = dateStr.substring(0, 7);              // YYYY-MM
+
+      // 只計算選取月份的資料
+      if (monthStr === selectedMonth) {
+        const amount = Number(order.total_price || order.total_amount || 0);
+        const type = (order.order_type || '').toLowerCase();
+
+        if (!dailyMap[dateStr]) {
+          dailyMap[dateStr] = { panda: 0, online: 0, pos: 0, total: 0 };
+        }
+
+        dailyMap[dateStr].total += amount;
+        totalMonth += amount;
+
+        // 管道分流判斷
+        if (type.includes('熊貓') || type.includes('foodpanda')) {
+          dailyMap[dateStr].panda += amount;
+          pandaMonth += amount;
+        } else if (type.includes('pos') || type.includes('散點') || type.includes('現場輸入')) {
+          dailyMap[dateStr].pos += amount;
+          posMonth += amount;
+        } else {
+          dailyMap[dateStr].online += amount;
+          onlineMonth += amount;
         }
       }
     });
 
-    if (hasNewOrder) {
-      playBeep(); // 有新訂單跳出時自動響鈴
+    // 1. 更新卡片數字
+    document.getElementById('statTotal').innerText = `$${totalMonth.toLocaleString()}`;
+    document.getElementById('statPanda').innerText = `$${pandaMonth.toLocaleString()}`;
+    document.getElementById('statOnline').innerText = `$${onlineMonth.toLocaleString()}`;
+    document.getElementById('statPos').innerText = `$${posMonth.toLocaleString()}`;
+
+    // 2. 更新每日明細表格
+    const tbody = document.getElementById('dailyTableBody');
+    const sortedDates = Object.keys(dailyMap).sort().reverse(); // 日期降序排列
+
+    if (sortedDates.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">該月份尚無營業資料</td></tr>';
+      return;
     }
 
-    isFirstLoad = false;
-    renderOrders(orders);
+    tbody.innerHTML = sortedDates.map(date => {
+      const d = dailyMap[date];
+      return `
+        <tr>
+          <td><b>${date}</b></td>
+          <td style="color:#ff2b56;">$${d.panda.toLocaleString()}</td>
+          <td style="color:#1890ff;">$${d.online.toLocaleString()}</td>
+          <td style="color:#fa8c16;">$${d.pos.toLocaleString()}</td>
+          <td style="color:#4caf50; font-weight:bold;">$${d.total.toLocaleString()}</td>
+        </tr>
+      `;
+    }).join('');
   }
 
   function renderOrders(orders) {
@@ -150,12 +285,10 @@
               <span class="order-type ${order.order_type}">${order.order_type} (${order.status})</span>
             </div>
             <div class="cust-info">
-              <div>👤 <b>${order.customer_name}</b> (${order.customer_phone})</div>
-              ${order.pickup_time ? `<div>🕒 時間：${order.pickup_time}</div>` : ''}
-              ${order.address ? `<div>📍 地址：${order.address}</div>` : ''}
-              <div>🧂 芥末: ${order.wasabi} / 醬油: ${order.soy_sauce}</div>
+              <div>👤 <b>${order.customer_name || '現場顧客'}</b> ${order.customer_phone ? `(${order.customer_phone})` : ''}</div>
+              <div>🧂 芥末: ${order.wasabi || '正常'} / 醬油: ${order.soy_sauce || '正常'}</div>
             </div>
-            ${order.note ? `<div class="note-box">📝 備註：${order.note}</div>` : ''}
+            ${order.note ? `<div style="font-size:12px; color:#ffc107; background:#3a321d; padding:4px 8px; border-radius:4px; margin-bottom:8px;">📝 ${order.note}</div>` : ''}
             <div class="items-box">${itemsHtml}</div>
           </div>
           <div>
@@ -176,18 +309,9 @@
     fetchOrders();
   }
 
-  // 1. 即時推播廣播監聽
-  supabaseClient
-    .channel('public:orders')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
-      fetchOrders();
-    })
-    .subscribe();
-
-  // 2. 背景定時掃描（每 5 秒檢查一次，雙重防護）
+  // 自動推播與輪詢
+  supabaseClient.channel('public:orders').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, fetchOrders).subscribe();
   setInterval(fetchOrders, 5000);
-
-  // 初次載入
   fetchOrders();
 </script>
 </body>
