@@ -3,34 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>米福壽司 - POS 接單與營業額報表系統</title>
+  <title>米福壽司 - POS 接單與營收淨額報表系統</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
     body { background-color: #1e1e24; color: #fff; margin: 0; padding: 20px; }
     .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
     .header h1 { margin: 0; font-size: 24px; color: #ff4d4f; }
-    .btn-audio { background: #ff4d4f; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-left: 10px; font-weight: bold; }
+    .header-btns { display: flex; gap: 10px; align-items: center; }
+    .btn-pos-add { background: #fa8c16; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
+    .btn-audio { background: #ff4d4f; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
     .btn-audio.active { background: #52c41a; }
     
     /* 報表控制區 */
     .report-section { background: #2b2b36; border-radius: 10px; padding: 20px; margin-bottom: 25px; border: 1px solid #3d3d4e; }
-    .report-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-    .date-picker { background: #1e1e24; color: #fff; border: 1px solid #555; padding: 8px 12px; border-radius: 6px; font-size: 16px; }
+    .report-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+    .date-picker, .rate-input { background: #1e1e24; color: #fff; border: 1px solid #555; padding: 6px 10px; border-radius: 6px; font-size: 14px; }
     
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
-    .stat-card { background: #1e1e24; border-radius: 8px; padding: 15px; border-left: 4px solid #888; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .stat-card { background: #1e1e24; border-radius: 8px; padding: 12px 15px; border-left: 4px solid #888; }
     .stat-card.total { border-color: #4caf50; }
-    .stat-card.panda { border-color: #ff2b56; }
+    .stat-card.panda-gross { border-color: #ff2b56; }
+    .stat-card.panda-net { border-color: #e91e63; }
     .stat-card.online { border-color: #1890ff; }
     .stat-card.pos { border-color: #fa8c16; }
-    .stat-title { font-size: 12px; color: #aaa; margin-bottom: 5px; }
-    .stat-value { font-size: 22px; font-weight: bold; }
+    .stat-title { font-size: 12px; color: #aaa; margin-bottom: 4px; }
+    .stat-value { font-size: 20px; font-weight: bold; }
+    .stat-sub { font-size: 11px; color: #888; margin-top: 3px; }
 
     /* 每日營業額表格 */
-    .table-container { max-height: 250px; overflow-y: auto; background: #1e1e24; border-radius: 6px; }
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
-    th, td { padding: 10px 12px; border-bottom: 1px solid #333; }
+    .table-container { max-height: 220px; overflow-y: auto; background: #1e1e24; border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+    th, td { padding: 8px 12px; border-bottom: 1px solid #333; }
     th { background-color: #333342; position: sticky; top: 0; color: #ddd; }
     
     /* 訂單卡片區 */
@@ -44,20 +48,30 @@
     .cust-info { font-size: 14px; margin-bottom: 10px; line-height: 1.5; color: #ddd; }
     .items-box { background: #1e1e24; border-radius: 6px; padding: 10px; margin-bottom: 10px; max-height: 120px; overflow-y: auto; font-size: 13px; }
     .item-row { display: flex; justify-content: space-between; border-bottom: 1px dashed #333; padding: 4px 0; }
-    .total { text-align: right; font-size: 16px; font-weight: bold; color: #ff4d4f; margin-bottom: 10px; }
+    .total { text-align: right; font-size: 15px; font-weight: bold; color: #ff4d4f; margin-bottom: 10px; }
     .actions { display: flex; gap: 8px; }
     .btn { flex: 1; padding: 8px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
     .btn-accept { background: #52c41a; color: white; }
     .btn-complete { background: #1890ff; color: white; }
     .btn-cancel { background: #555; color: white; }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); justify-content: center; align-items: center; z-index: 1000; }
+    .modal-content { background: #2b2b36; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; border: 1px solid #444; max-height: 90vh; overflow-y: auto; }
+    .modal-title { font-size: 20px; font-weight: bold; color: #fa8c16; margin-bottom: 15px; display: flex; justify-content: space-between; }
+    .menu-item-row { display: flex; justify-content: space-between; align-items: center; background: #1e1e24; padding: 10px; border-radius: 6px; margin-bottom: 8px; }
+    .qty-btn { background: #444; color: #fff; border: none; width: 28px; height: 28px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 13px; color: #aaa; margin-bottom: 4px; }
+    .form-control { width: 100%; background: #1e1e24; border: 1px solid #555; color: #fff; padding: 8px; border-radius: 6px; font-size: 14px; }
   </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>米福壽司 POS 接單與營收統計</h1>
-  <div>
-    <span id="listenStatus" style="font-size:13px; color:#aaa;">⚡ 自動監聽中</span>
+  <h1>米福壽司 POS 接單與營收淨額系統</h1>
+  <div class="header-btns">
+    <button class="btn-pos-add" onclick="openPosModal()">➕ 門市現場散點/補單</button>
     <button id="audioBtn" class="btn-audio" onclick="enableAudio()">🔔 點擊開啟音效</button>
   </div>
 </div>
@@ -65,29 +79,44 @@
 <!-- 📊 營收統計與日期篩選區 -->
 <div class="report-section">
   <div class="report-header">
-    <h2 style="margin:0; font-size:18px;">📈 營業額統計報表</h2>
-    <div>
-      <label style="font-size:14px; color:#ccc; margin-right:8px;">選擇查看月份：</label>
-      <input type="month" id="monthPicker" class="date-picker" onchange="renderReport()">
+    <h2 style="margin:0; font-size:18px;">📈 營業額與實收淨額報表</h2>
+    <div style="display:flex; gap:15px; align-items:center;">
+      <div>
+        <label style="font-size:13px; color:#ccc;">🐼 熊貓抽成 %：</label>
+        <input type="number" id="pandaRateInput" class="rate-input" value="30" style="width:60px;" onchange="renderReport()"> %
+      </div>
+      <div>
+        <label style="font-size:13px; color:#ccc;">月份：</label>
+        <input type="month" id="monthPicker" class="date-picker" onchange="renderReport()">
+      </div>
     </div>
   </div>
 
   <div class="stats-grid">
     <div class="stat-card total">
-      <div class="stat-title">當月總營業額</div>
-      <div class="stat-value" id="statTotal" style="color:#4caf50;">$0</div>
+      <div class="stat-title">全店實際總淨收入 (實收)</div>
+      <div class="stat-value" id="statGrandNet" style="color:#4caf50;">$0</div>
+      <div class="stat-sub">已扣除熊貓抽成</div>
     </div>
-    <div class="stat-card panda">
-      <div class="stat-title">🐼 熊貓 (Foodpanda)</div>
-      <div class="stat-value" id="statPanda" style="color:#ff2b56;">$0</div>
+    <div class="stat-card panda-gross">
+      <div class="stat-title">🐼 熊貓原始營業額 (毛額)</div>
+      <div class="stat-value" id="statPandaGross" style="color:#ff2b56;">$0</div>
+      <div class="stat-sub" id="statPandaFee">抽成扣除: $0</div>
+    </div>
+    <div class="stat-card panda-net">
+      <div class="stat-title">🐼 熊貓實際撥款 (淨額)</div>
+      <div class="stat-value" id="statPandaNet" style="color:#e91e63;">$0</div>
+      <div class="stat-sub">入帳估計金額</div>
     </div>
     <div class="stat-card online">
-      <div class="stat-title">🌐 線上點餐 / 外帶預約</div>
+      <div class="stat-title">🌐 線上點餐 / 外帶</div>
       <div class="stat-value" id="statOnline" style="color:#1890ff;">$0</div>
+      <div class="stat-sub">100% 實收</div>
     </div>
     <div class="stat-card pos">
       <div class="stat-title">🏪 門市 POS 現場散點</div>
       <div class="stat-value" id="statPos" style="color:#fa8c16;">$0</div>
+      <div class="stat-sub">100% 實收</div>
     </div>
   </div>
 
@@ -97,14 +126,16 @@
       <thead>
         <tr>
           <th>日期 (年月日)</th>
-          <th>🐼 熊貓外送</th>
+          <th>🐼 熊貓毛額</th>
+          <th>🐼 熊貓扣％抽成</th>
+          <th>🐼 熊貓實收淨額</th>
           <th>🌐 線上/外帶</th>
           <th>🏪 POS 散點</th>
-          <th>當日小計</th>
+          <th>當日全店實收總計</th>
         </tr>
       </thead>
       <tbody id="dailyTableBody">
-        <tr><td colspan="5" style="text-align:center; color:#888;">載入資料中...</td></tr>
+        <tr><td colspan="7" style="text-align:center; color:#888;">載入資料中...</td></tr>
       </tbody>
     </table>
   </div>
@@ -113,6 +144,39 @@
 <h2 style="font-size:18px; margin-bottom:15px;">📋 即時訂單列表</h2>
 <div class="grid" id="ordersGrid">
   <div style="color: #888;">正在載入訂單...</div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="posModal">
+  <div class="modal-content">
+    <div class="modal-title">
+      <span>🏪 門市現場散點 / 補單</span>
+      <span style="cursor:pointer; color:#aaa;" onclick="closePosModal()">✕</span>
+    </div>
+
+    <div class="form-group">
+      <label>訂單來源管道</label>
+      <select id="posOrderType" class="form-control">
+        <option value="門市POS散點">🏪 門市POS散點 (現場客)</option>
+        <option value="熊貓外送">🐼 熊貓 (Foodpanda 外補單)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>選擇菜單餐點</label>
+      <div id="menuItemsContainer"></div>
+    </div>
+
+    <div style="border-top:1px solid #444; padding-top:10px; margin-top:10px; text-align:right;">
+      <span style="font-size:14px; color:#aaa;">合計金額：</span>
+      <span id="posTotalAmount" style="font-size:22px; font-weight:bold; color:#fa8c16;">$0</span>
+    </div>
+
+    <div style="display:flex; gap:10px; margin-top:15px;">
+      <button class="btn btn-cancel" onclick="closePosModal()">取消</button>
+      <button class="btn btn-accept" style="background:#fa8c16;" onclick="submitPosOrder()">完成開單 (寫入庫)</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -126,10 +190,103 @@
   let isFirstLoad = true;
   let audioEnabled = false;
 
-  // 初始化預設為「這個月」
+  const presetMenu = [
+    { name: '1.煙燻鮭魚', price: 20 },
+    { name: '5.鮮蝦沙拉', price: 20 },
+    { name: '7.櫻花鴨肉', price: 30 },
+    { name: '26.蟹肉棒', price: 30 },
+    { name: 'B6.焗烤玉子燒', price: 60 },
+    { name: 'B7.炙燒龍蝦沙拉', price: 45 },
+    { name: 'B10.魚蛋沙拉', price: 75 }
+  ];
+
+  let currentCart = {};
+
   const today = new Date();
-  const currentMonthStr = today.toISOString().substring(0, 7); // YYYY-MM
-  document.getElementById('monthPicker').value = currentMonthStr;
+  document.getElementById('monthPicker').value = today.toISOString().substring(0, 7);
+
+  function openPosModal() {
+    currentCart = {};
+    renderMenuPicker();
+    document.getElementById('posModal').style.display = 'flex';
+  }
+
+  function closePosModal() {
+    document.getElementById('posModal').style.display = 'none';
+  }
+
+  function renderMenuPicker() {
+    const container = document.getElementById('menuItemsContainer');
+    let total = 0;
+
+    container.innerHTML = presetMenu.map((item) => {
+      const qty = currentCart[item.name] || 0;
+      total += qty * item.price;
+      return `
+        <div class="menu-item-row">
+          <div><b>${item.name}</b> <span style="color:#aaa;">($${item.price})</span></div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button class="qty-btn" onclick="changeQty('${item.name}', -1)">-</button>
+            <span style="width:20px; text-align:center;">${qty}</span>
+            <button class="qty-btn" onclick="changeQty('${item.name}', 1)">+</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    document.getElementById('posTotalAmount').innerText = `$${total}`;
+  }
+
+  function changeQty(name, delta) {
+    const current = currentCart[name] || 0;
+    const newQty = Math.max(0, current + delta);
+    if (newQty === 0) delete currentCart[name];
+    else currentCart[name] = newQty;
+    renderMenuPicker();
+  }
+
+  async function submitPosOrder() {
+    const type = document.getElementById('posOrderType').value;
+    const cartEntries = Object.entries(currentCart);
+
+    if (cartEntries.length === 0) {
+      alert('請至少選擇一項餐點！');
+      return;
+    }
+
+    let totalPrice = 0;
+    cartEntries.forEach(([name, qty]) => {
+      const found = presetMenu.find(m => m.name === name);
+      if (found) totalPrice += found.price * qty;
+    });
+
+    const { data: order, error } = await supabaseClient
+      .from('orders')
+      .insert([{
+        customer_name: '現場門市散點',
+        order_type: type,
+        status: 'Completed',
+        total_price: totalPrice,
+        wasabi: '正常',
+        soy_sauce: '正常'
+      }])
+      .select().single();
+
+    if (error) {
+      alert('開單失敗：' + error.message);
+      return;
+    }
+
+    const itemsToInsert = cartEntries.map(([name, qty]) => {
+      const found = presetMenu.find(m => m.name === name);
+      return { order_id: order.id, item_name: name, quantity: qty, price: found ? found.price : 0 };
+    });
+
+    await supabaseClient.from('order_items').insert(itemsToInsert);
+
+    closePosModal();
+    fetchOrders();
+  }
 
   async function enableAudio() {
     try {
@@ -140,9 +297,7 @@
       btn.classList.add('active');
       btn.innerText = '🔔 音效已開啟';
       playBeep();
-    } catch (e) {
-      alert('音效開啟失敗: ' + e.message);
-    }
+    } catch (e) { alert('音效開啟失敗: ' + e.message); }
   }
 
   function playBeep() {
@@ -171,7 +326,6 @@
 
     allOrders = orders || [];
 
-    // 新訂單檢測
     let hasNewOrder = false;
     allOrders.forEach(order => {
       if (!knownOrderIds.has(order.id)) {
@@ -184,46 +338,34 @@
     isFirstLoad = false;
 
     renderOrders(allOrders);
-    renderReport(); // 更新統計報表
+    renderReport();
   }
 
-  // 📊 渲染統計報表與每日列表
   function renderReport() {
-    const selectedMonth = document.getElementById('monthPicker').value; // YYYY-MM
+    const selectedMonth = document.getElementById('monthPicker').value;
+    const pandaRate = parseFloat(document.getElementById('pandaRateInput').value || '30') / 100;
     if (!selectedMonth) return;
 
-    let totalMonth = 0;
-    let pandaMonth = 0;
-    let onlineMonth = 0;
-    let posMonth = 0;
-
-    // 用物件來按「YYYY-MM-DD」歸類每日金額
+    let pandaGrossMonth = 0, onlineMonth = 0, posMonth = 0;
     const dailyMap = {};
 
     allOrders.forEach(order => {
       if (order.status === 'Cancelled' || order.status === 'cancelled') return;
 
       const createdAt = new Date(order.created_at);
-      const dateStr = createdAt.toISOString().split('T')[0]; // YYYY-MM-DD
-      const monthStr = dateStr.substring(0, 7);              // YYYY-MM
+      const dateStr = createdAt.toISOString().split('T')[0];
+      const monthStr = dateStr.substring(0, 7);
 
-      // 只計算選取月份的資料
       if (monthStr === selectedMonth) {
         const amount = Number(order.total_price || order.total_amount || 0);
         const type = (order.order_type || '').toLowerCase();
 
-        if (!dailyMap[dateStr]) {
-          dailyMap[dateStr] = { panda: 0, online: 0, pos: 0, total: 0 };
-        }
+        if (!dailyMap[dateStr]) dailyMap[dateStr] = { pandaGross: 0, online: 0, pos: 0 };
 
-        dailyMap[dateStr].total += amount;
-        totalMonth += amount;
-
-        // 管道分流判斷
         if (type.includes('熊貓') || type.includes('foodpanda')) {
-          dailyMap[dateStr].panda += amount;
-          pandaMonth += amount;
-        } else if (type.includes('pos') || type.includes('散點') || type.includes('現場輸入')) {
+          dailyMap[dateStr].pandaGross += amount;
+          pandaGrossMonth += amount;
+        } else if (type.includes('pos') || type.includes('散點') || type.includes('現場')) {
           dailyMap[dateStr].pos += amount;
           posMonth += amount;
         } else {
@@ -233,30 +375,41 @@
       }
     });
 
-    // 1. 更新卡片數字
-    document.getElementById('statTotal').innerText = `$${totalMonth.toLocaleString()}`;
-    document.getElementById('statPanda').innerText = `$${pandaMonth.toLocaleString()}`;
+    // 熊貓抽成與實收計算
+    const pandaFeeMonth = Math.round(pandaGrossMonth * pandaRate);
+    const pandaNetMonth = pandaGrossMonth - pandaFeeMonth;
+    const grandNetMonth = onlineMonth + posMonth + pandaNetMonth;
+
+    document.getElementById('statGrandNet').innerText = `$${grandNetMonth.toLocaleString()}`;
+    document.getElementById('statPandaGross').innerText = `$${pandaGrossMonth.toLocaleString()}`;
+    document.getElementById('statPandaFee').innerText = `抽成扣除 (${Math.round(pandaRate*100)}%): -$${pandaFeeMonth.toLocaleString()}`;
+    document.getElementById('statPandaNet').innerText = `$${pandaNetMonth.toLocaleString()}`;
     document.getElementById('statOnline').innerText = `$${onlineMonth.toLocaleString()}`;
     document.getElementById('statPos').innerText = `$${posMonth.toLocaleString()}`;
 
-    // 2. 更新每日明細表格
     const tbody = document.getElementById('dailyTableBody');
-    const sortedDates = Object.keys(dailyMap).sort().reverse(); // 日期降序排列
+    const sortedDates = Object.keys(dailyMap).sort().reverse();
 
     if (sortedDates.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">該月份尚無營業資料</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#888;">該月份尚無營業資料</td></tr>';
       return;
     }
 
     tbody.innerHTML = sortedDates.map(date => {
       const d = dailyMap[date];
+      const pFee = Math.round(d.pandaGross * pandaRate);
+      const pNet = d.pandaGross - pFee;
+      const dayNetTotal = d.online + d.pos + pNet;
+
       return `
         <tr>
           <td><b>${date}</b></td>
-          <td style="color:#ff2b56;">$${d.panda.toLocaleString()}</td>
+          <td style="color:#ff2b56;">$${d.pandaGross.toLocaleString()}</td>
+          <td style="color:#aaa;">-$${pFee.toLocaleString()}</td>
+          <td style="color:#e91e63; font-weight:bold;">$${pNet.toLocaleString()}</td>
           <td style="color:#1890ff;">$${d.online.toLocaleString()}</td>
           <td style="color:#fa8c16;">$${d.pos.toLocaleString()}</td>
-          <td style="color:#4caf50; font-weight:bold;">$${d.total.toLocaleString()}</td>
+          <td style="color:#4caf50; font-weight:bold;">$${dayNetTotal.toLocaleString()}</td>
         </tr>
       `;
     }).join('');
@@ -309,7 +462,6 @@
     fetchOrders();
   }
 
-  // 自動推播與輪詢
   supabaseClient.channel('public:orders').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, fetchOrders).subscribe();
   setInterval(fetchOrders, 5000);
   fetchOrders();
