@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>米福壽司 - 線上點餐系統</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8f9fa; margin: 0; padding: 15px; padding-bottom: 90px; }
+        .container { max-width: 500px; margin: 0 auto; }
+        .header { background: #d32f2f; color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px; }
+        .section-title { background: #333; color: white; padding: 8px 12px; border-radius: 6px; font-weight: bold; margin-top: 15px; }
+        .item-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .item-card { background: white; border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between; }
+        .item-name { font-size: 14px; font-weight: bold; color: #222; }
+        .item-price { color: #d32f2f; font-weight: bold; margin: 4px 0; }
+        .stepper { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+        .btn-step { background: #e0e0e0; border: 1px solid #ccc; width: 34px; height: 34px; border-radius: 6px; font-size: 20px; font-weight: bold; cursor: pointer; -webkit-appearance: none; display: flex; align-items: center; justify-content: center; color: #333; }
+        .btn-step:active { background: #bbb; }
+        .qty-num { font-weight: bold; font-size: 16px; width: 24px; text-align: center; display: inline-block; }
+        .form-card { background: white; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid #e0e0e0; }
+        .form-group { margin-bottom: 10px; }
+        .form-group label { font-size: 13px; font-weight: bold; color: #555; display: block; margin-bottom: 4px; }
+        .form-group input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #222; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.2); z-index: 100; }
+        .submit-btn { background: #2e7d32; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2 style="margin:0;">米福壽司 🍣</h2>
+        <div style="font-size:12px; margin-top:4px;">10元經典 / 15元現做炙燒</div>
+    </div>
+
+    <div class="form-card">
+        <div class="form-group">
+            <label>取餐人姓名：</label>
+            <input type="text" id="cust-name" placeholder="請輸入姓名 (如：林先生)">
+        </div>
+        <div class="form-group">
+            <label>聯絡電話：</label>
+            <input type="tel" id="cust-phone" placeholder="請輸入手機號碼">
+        </div>
+        <div class="form-group">
+            <label>預計取餐時間：</label>
+            <input type="time" id="pickup-time">
+        </div>
+    </div>
+
+    <div class="section-title">經典 10 元區</div>
+    <div class="item-grid">
+        <div class="item-card"><div><div class="item-name">1.煙燻鮭魚</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('1.煙燻鮭魚', -1, 10)">-</button><span id="qty-1.煙燻鮭魚" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('1.煙燻鮭魚', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">2.黃金魚片</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('2.黃金魚片', -1, 10)">-</button><span id="qty-2.黃金魚片" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('2.黃金魚片', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">3.原味花枝</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('3.原味花枝', -1, 10)">-</button><span id="qty-3.原味花枝" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('3.原味花枝', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">4.原味章魚</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('4.原味章魚', -1, 10)">-</button><span id="qty-4.原味章魚" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('4.原味章魚', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">5.鮮蝦沙拉</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('5.鮮蝦沙拉', -1, 10)">-</button><span id="qty-5.鮮蝦沙拉" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('5.鮮蝦沙拉', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">6.照燒雞腿</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('6.照燒雞腿', -1, 10)">-</button><span id="qty-6.照燒雞腿" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('6.照燒雞腿', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">7.櫻桃鴨肉</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('7.櫻桃鴨肉', -1, 10)">-</button><span id="qty-7.櫻桃鴨肉" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('7.櫻桃鴨肉', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">8.鮑魚沙拉</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('8.鮑魚沙拉', -1, 10)">-</button><span id="qty-8.鮑魚沙拉" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('8.鮑魚沙拉', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">9.黑胡椒牛</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('9.黑胡椒牛', -1, 10)">-</button><span id="qty-9.黑胡椒牛" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('9.黑胡椒牛', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">10.起司魚卵</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('10.起司魚卵', -1, 10)">-</button><span id="qty-10.起司魚卵" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('10.起司魚卵', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">11.起司火腿</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('11.起司火腿', -1, 10)">-</button><span id="qty-11.起司火腿" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('11.起司火腿', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">12.玉子燒</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('12.玉子燒', -1, 10)">-</button><span id="qty-12.玉子燒" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('12.玉子燒', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">13.蒲燒鯛魚</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('13.蒲燒鯛魚', -1, 10)">-</button><span id="qty-13.蒲燒鯛魚" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('13.蒲燒鯛魚', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">14.豆皮壽司</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('14.豆皮壽司', -1, 10)">-</button><span id="qty-14.豆皮壽司" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('14.豆皮壽司', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">15.蟹肉沙拉</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('15.蟹肉沙拉', -1, 10)">-</button><span id="qty-15.蟹肉沙拉" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('15.蟹肉沙拉', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">16.珍味蝦卵</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('16.珍味蝦卵', -1, 10)">-</button><span id="qty-16.珍味蝦卵" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('16.珍味蝦卵', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">17.珍味魚卵</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('17.珍味魚卵', -1, 10)">-</button><span id="qty-17.珍味魚卵" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('17.珍味魚卵', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">18.海帶芽</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('18.海帶芽', -1, 10)">-</button><span id="qty-18.海帶芽" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('18.海帶芽', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">19.玉米沙拉</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('19.玉米沙拉', -1, 10)">-</button><span id="qty-19.玉米沙拉" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('19.玉米沙拉', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">20.鮪魚沙拉</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('20.鮪魚沙拉', -1, 10)">-</button><span id="qty-20.鮪魚沙拉" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('20.鮪魚沙拉', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">21.肉鬆沙拉</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('21.肉鬆沙拉', -1, 10)">-</button><span id="qty-21.肉鬆沙拉" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('21.肉鬆沙拉', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">22.魚卵沙拉</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('22.魚卵沙拉', -1, 10)">-</button><span id="qty-22.魚卵沙拉" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('22.魚卵沙拉', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">23.干貝唇</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('23.干貝唇', -1, 10)">-</button><span id="qty-23.干貝唇" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('23.干貝唇', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">24.龍蝦沙拉</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('24.龍蝦沙拉', -1, 10)">-</button><span id="qty-24.龍蝦沙拉" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('24.龍蝦沙拉', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">25.味付雪貝</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('25.味付雪貝', -1, 10)">-</button><span id="qty-25.味付雪貝" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('25.味付雪貝', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">26.蟹肉棒</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('26.蟹肉棒', -1, 10)">-</button><span id="qty-26.蟹肉棒" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('26.蟹肉棒', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">27.辣味螺肉</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('27.辣味螺肉', -1, 10)">-</button><span id="qty-27.辣味螺肉" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('27.辣味螺肉', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">28.海瓜子</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('28.海瓜子', -1, 10)">-</button><span id="qty-28.海瓜子" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('28.海瓜子', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">29.海鮮沙拉</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('29.海鮮沙拉', -1, 10)">-</button><span id="qty-29.海鮮沙拉" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('29.海鮮沙拉', 1, 10)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">30.泡菜花枝</div><div class="item-price">$10</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('30.泡菜花枝', -1, 10)">-</button><span id="qty-30.泡菜花枝" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('30.泡菜花枝', 1, 10)">+</button></div></div>
+    </div>
+
+    <div class="section-title">上品 / 現做炙燒 15 元區</div>
+    <div class="item-grid">
+        <div class="item-card"><div><div class="item-name">A1.生鮭魚</div><div class="item-price">$15</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('A1.生鮭魚', -1, 15)">-</button><span id="qty-A1.生鮭魚" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('A1.生鮭魚', 1, 15)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">A2.生鯛魚</div><div class="item-price">$15</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('A2.生鯛魚', -1, 15)">-</button><span id="qty-A2.生鯛魚" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('A2.生鯛魚', 1, 15)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">A3.生鮪魚</div><div class="item-price">$15</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('A3.生鮪魚', -1, 15)">-</button><span id="qty-A3.生鮪魚" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('A3.生鮪魚', 1, 15)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">A4.生鮭魚肚</div><div class="item-price">$15</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('A4.生鮭魚肚', -1, 15)">-</button><span id="qty-A4.生鮭魚肚" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('A4.生鮭魚肚', 1, 15)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">A5.大蝦沙拉</div><div class="item-price">$15</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('A5.大蝦沙拉', -1, 15)">-</button><span id="qty-A5.大蝦沙拉" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('A5.大蝦沙拉', 1, 15)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">A6.起司蟹棒</div><div class="item-price">$15</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('A6.起司蟹棒', -1, 15)">-</button><span id="qty-A6.起司蟹棒" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('A6.起司蟹棒', 1, 15)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">A7.明太子蝦</div><div class="item-price">$15</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('A7.明太子蝦', -1, 15)">-</button><span id="qty-A7.明太子蝦" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('A7.明太子蝦', 1, 15)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">B1.炙燒鮭魚肚</div><div class="item-price">$15</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('B1.炙燒鮭魚肚', -1, 15)">-</button><span id="qty-B1.炙燒鮭魚肚" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('B1.炙燒鮭魚肚', 1, 15)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">B2.焗烤牛肉</div><div class="item-price">$15</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('B2.焗烤牛肉', -1, 15)">-</button><span id="qty-B2.焗烤牛肉" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('B2.焗烤牛肉', 1, 15)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">B3.焗烤雞腿肉</div><div class="item-price">$15</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('B3.焗烤雞腿肉', -1, 15)">-</button><span id="qty-B3.焗烤雞腿肉" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('B3.焗烤雞腿肉', 1, 15)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">B4.焗烤蝦</div><div class="item-price">$15</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('B4.焗烤蝦', -1, 15)">-</button><span id="qty-B4.焗烤蝦" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('B4.焗烤蝦', 1, 15)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">B5.焗烤章魚燒</div><div class="item-price">$15</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('B5.焗烤章魚燒', -1, 15)">-</button><span id="qty-B5.焗烤章魚燒" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('B5.焗烤章魚燒', 1, 15)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">B6.焗烤玉子燒</div><div class="item-price">$15</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('B6.焗烤玉子燒', -1, 15)">-</button><span id="qty-B6.焗烤玉子燒" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('B6.焗烤玉子燒', 1, 15)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">B7.炙燒龍蝦沙拉</div><div class="item-price">$15</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('B7.炙燒龍蝦沙拉', -1, 15)">-</button><span id="qty-B7.炙燒龍蝦沙拉" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('B7.炙燒龍蝦沙拉', 1, 15)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">B8.炙燒鯛魚</div><div class="item-price">$15</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('B8.炙燒鯛魚', -1, 15)">-</button><span id="qty-B8.炙燒鯛魚" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('B8.炙燒鯛魚', 1, 15)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">B9.鳳梨蝦球</div><div class="item-price">$15</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('B9.鳳梨蝦球', -1, 15)">-</button><span id="qty-B9.鳳梨蝦球" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('B9.鳳梨蝦球', 1, 15)">+</button></div></div>
+        <div class="item-card"><div><div class="item-name">B10.魚蛋沙拉</div><div class="item-price">$15</div></div><div class="stepper"><button type="button" class="btn-step" onclick="updateQty('B10.魚蛋沙拉', -1, 15)">-</button><span id="qty-B10.魚蛋沙拉" class="qty-num">0</span><button type="button" class="btn-step" onclick="updateQty('B10.魚蛋沙拉', 1, 15)">+</button></div></div>
+    </div>
+</div>
+
+<div class="bottom-bar">
+    <div>
+        <div>共 <span id="total-count" style="color:#ffeb3b; font-weight:bold;">0</span> 貫</div>
+        <div style="font-size:18px; font-weight:bold;">小計: $<span id="total-price">0</span></div>
+    </div>
+    <button class="submit-btn" onclick="sendOrderToLine()">送出訂單</button>
+</div>
+
+<script>
+    var cart = {};
+
+    function updateQty(name, delta, price) {
+        if (!cart[name]) cart[name] = 0;
+        if (cart[name] + delta >= 0) {
+            cart[name] += delta;
+            var el = document.getElementById('qty-' + name);
+            if (el) el.innerText = cart[name];
+            calculateTotal();
+        }
+    }
+
+    function calculateTotal() {
+        var count = 0, total = 0;
+        for (var item in cart) {
+            var qty = cart[item];
+            if (qty > 0) {
+                count += qty;
+                var price = (item.startsWith('A') || item.startsWith('B')) ? 15 : 10;
+                total += qty * price;
+            }
+        }
+        document.getElementById('total-count').innerText = count;
+        document.getElementById('total-price').innerText = total;
+    }
+
+    function sendOrderToLine() {
+        var name = document.getElementById('cust-name').value.trim();
+        var phone = document.getElementById('cust-phone').value.trim();
+        var time = document.getElementById('pickup-time').value;
+
+        if (!name || !phone || !time) {
+            alert('請完整填寫姓名、電話與預計取餐時間！');
+            return;
+        }
+
+        var totalCount = parseInt(document.getElementById('total-count').innerText);
+        if (totalCount === 0) {
+            alert('請至少選擇一貫壽司！');
+            return;
+        }
+
+        var count10 = 0, count15 = 0;
+        var itemsDetail = "";
+
+        for (var item in cart) {
+            if (cart[item] > 0) {
+                itemsDetail += "• " + item + " x " + cart[item] + "\n";
+                if (item.startsWith('A') || item.startsWith('B')) {
+                    count15 += cart[item];
+                } else {
+                    count10 += cart[item];
+                }
+            }
+        }
+
+        var totalPrice = document.getElementById('total-price').innerText;
+
+        var messageText = "🍣【米福壽司 - 外帶預約單】\n" +
+                          "------------------------\n" +
+                          "👤 訂購人：" + name + "\n" +
+                          "📞 電話：" + phone + "\n" +
+                          "⏰ 取餐時間：" + time + "\n" +
+                          "------------------------\n" +
+                          "📋 點餐明細：\n" + itemsDetail +
+                          "------------------------\n" +
+                          "📊 統計：10元(" + count10 + "貫) / 15元(" + count15 + "貫)\n" +
+                          "🔢 總貫數：" + totalCount + " 貫\n" +
+                          "💰 總金額：$" + totalPrice + " 元";
+
+        alert('【預覽測試成功】\n送出後將發送以下內容至 LINE 聊天室：\n\n' + messageText);
+    }
+</script>
+
+</body>
+</html>
