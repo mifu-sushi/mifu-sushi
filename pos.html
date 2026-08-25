@@ -12,8 +12,15 @@
     .header h1 { margin: 0; font-size: 24px; color: #ff4d4f; }
     .header-btns { display: flex; gap: 10px; align-items: center; }
     .btn-pos-add { background: #fa8c16; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
-    .btn-audio { background: #ff4d4f; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .btn-audio { background: #ff4d4f; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.3s; }
     .btn-audio.active { background: #52c41a; }
+    .btn-audio.warning { animation: pulse 1.5s infinite; }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.8; }
+      100% { transform: scale(1); opacity: 1; }
+    }
     
     /* 報表控制區 */
     .report-section { background: #2b2b36; border-radius: 10px; padding: 20px; margin-bottom: 25px; border: 1px solid #3d3d4e; }
@@ -66,13 +73,13 @@
     .form-control { width: 100%; background: #1e1e24; border: 1px solid #555; color: #fff; padding: 8px; border-radius: 6px; font-size: 14px; }
   </style>
 </head>
-<body>
+<body onclick="autoEnableAudio()">
 
 <div class="header">
   <h1>米福壽司 POS 接單與營收淨額系統</h1>
   <div class="header-btns">
     <button class="btn-pos-add" onclick="openPosModal()">➕ 門市現場散點/補單</button>
-    <button id="audioBtn" class="btn-audio" onclick="enableAudio()">🔔 點擊開啟音效</button>
+    <button id="audioBtn" class="btn-audio warning" onclick="enableAudio(true)">🔔 點擊開啟音效 (未啟用)</button>
   </div>
 </div>
 
@@ -205,6 +212,70 @@
   const today = new Date();
   document.getElementById('monthPicker').value = today.toISOString().substring(0, 7);
 
+  // 點擊頁面任何地方自動解鎖音效權限
+  async function autoEnableAudio() {
+    if (!audioEnabled) {
+      await enableAudio(false);
+    }
+  }
+
+  async function enableAudio(playTestBeep = true) {
+    try {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        await audioCtx.resume();
+      }
+      audioEnabled = true;
+
+      const btn = document.getElementById('audioBtn');
+      btn.classList.remove('warning');
+      btn.classList.add('active');
+      btn.innerText = '🔔 音效已自動開啟';
+
+      if (playTestBeep) playBeep();
+    } catch (e) {
+      console.log('音效解鎖嘗試中...', e);
+    }
+  }
+
+  function playBeep() {
+    if (!audioCtx) return;
+    
+    // 如果 Context 被掛起，嘗試復甦
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
+    try {
+      const now = audioCtx.currentTime;
+      // 發出雙音階「叮咚」提醒聲
+      const osc1 = audioCtx.createOscillator();
+      const osc2 = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(880, now); // 叮
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1174.66, now + 0.15); // 咚
+
+      gain.gain.setValueAtTime(0.6, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc1.start(now);
+      osc1.stop(now + 0.15);
+      osc2.start(now + 0.15);
+      osc2.stop(now + 0.5);
+    } catch (e) {
+      console.error('播放音效失敗:', e);
+    }
+  }
+
   function openPosModal() {
     currentCart = {};
     renderMenuPicker();
@@ -288,34 +359,6 @@
     fetchOrders();
   }
 
-  async function enableAudio() {
-    try {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') await audioCtx.resume();
-      audioEnabled = true;
-      const btn = document.getElementById('audioBtn');
-      btn.classList.add('active');
-      btn.innerText = '🔔 音效已開啟';
-      playBeep();
-    } catch (e) { alert('音效開啟失敗: ' + e.message); }
-  }
-
-  function playBeep() {
-    if (!audioCtx || !audioEnabled) return;
-    try {
-      const now = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, now);
-      gain.gain.setValueAtTime(0.5, now);
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start(now);
-      osc.stop(now + 0.2);
-    } catch (e) {}
-  }
-
   async function fetchOrders() {
     const { data: orders, error } = await supabaseClient
       .from('orders')
@@ -334,7 +377,9 @@
       }
     });
 
-    if (hasNewOrder) playBeep();
+    if (hasNewOrder) {
+      playBeep();
+    }
     isFirstLoad = false;
 
     renderOrders(allOrders);
