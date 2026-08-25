@@ -1,1 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>米福壽司 - 門市 POS 接單後台</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    body { background-color: #1e1e24; color: #fff; margin: 0; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
+    .header h1 { margin: 0; font-size: 24px; color: #ff4d4f; }
+    .status-badge { background: #2b2b36; padding: 6px 12px; border-radius: 20px; font-size: 13px; border: 1px solid #444; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
+    .card { background: #2b2b36; border-radius: 10px; border: 1px solid #3d3d4e; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3d3d4e; padding-bottom: 8px; margin-bottom: 10px; }
+    .order-id { font-weight: bold; color: #ff4d4f; font-size: 14px; }
+    .order-type { font-size: 12px; padding: 2px 8px; border-radius: 4px; font-weight: bold; background: #e6f7ff; color: #1890ff; }
+    .order-type.外送 { background: #fff7e6; color: #fa8c16; }
+    .order-type.預約取餐 { background: #f6ffed; color: #52c41a; }
+    .cust-info { font-size: 14px; margin-bottom: 10px; line-height: 1.5; color: #ddd; }
+    .items-box { background: #1e1e24; border-radius: 6px; padding: 10px; margin-bottom: 10px; max-height: 150px; overflow-y: auto; font-size: 13px; }
+    .item-row { display: flex; justify-content: space-between; border-bottom: 1px dashed #333; padding: 4px 0; }
+    .item-row:last-child { border-bottom: none; }
+    .note-box { font-size: 12px; color: #ffc107; background: #3a321d; padding: 6px 10px; border-radius: 4px; margin-bottom: 10px; }
+    .total { text-align: right; font-size: 16px; font-weight: bold; color: #ff4d4f; margin-bottom: 12px; }
+    .actions { display: flex; gap: 8px; }
+    .btn { flex: 1; padding: 8px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 13px; }
+    .btn-accept { background: #52c41a; color: white; }
+    .btn-complete { background: #1890ff; color: white; }
+    .btn-cancel { background: #555; color: white; }
+    .btn:active { opacity: 0.8; }
+  </style>
+</head>
+<body>
 
+<div class="header">
+  <h1>米福壽司 POS 接單系統</h1>
+  <div>
+    <span class="status-badge">⚡ 自動監聽中</span>
+    <button onclick="enableAudio()" style="background:#444; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; margin-left:10px;">🔊 啟用音效</button>
+  </div>
+</div>
+
+<div class="grid" id="ordersGrid">
+  <div style="color: #888;">正在載入訂單...</div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://fnpkpxmswnsqsjsdpcdc.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_m7MorN4F4WnGngacYoqSWQ_fPP0zVyv';
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  let audioCtx = null;
+  function enableAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    alert('已啟用新訂單音效通知！');
+  }
+
+  function playBeep() {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 880; // A5 音高
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.3);
+  }
+
+  async function fetchOrders() {
+    const { data: orders, error } = await supabaseClient
+      .from('orders')
+      .select('*, order_items(*)')
+      .order('created_at', { ascending: false });
+
+    if (error) return console.error(error);
+    renderOrders(orders);
+  }
+
+  function renderOrders(orders) {
+    const grid = document.getElementById('ordersGrid');
+    if (orders.length === 0) {
+      grid.innerHTML = '<div style="color:#888;">目前沒有訂單</div>';
+      return;
+    }
+
+    grid.innerHTML = orders.map(order => {
+      const itemsHtml = order.order_items.map(i => `
+        <div class="item-row">
+          <span>${i.item_name}</span>
+          <span>x ${i.quantity} ($${i.price * i.quantity})</span>
+        </div>
+      `).join('');
+
+      return `
+        <div class="card" style="${order.status === 'Completed' ? 'opacity:0.5' : ''}">
+          <div>
+            <div class="card-header">
+              <span class="order-id">#${order.id.substring(0, 8)}</span>
+              <span class="order-type ${order.order_type}">${order.order_type} (${order.status})</span>
+            </div>
+            <div class="cust-info">
+              <div>👤 <b>${order.customer_name}</b> (${order.customer_phone})</div>
+              ${order.pickup_time ? `<div>🕒 時間：${order.pickup_time}</div>` : ''}
+              ${order.address ? `<div>📍 地址：${order.address}</div>` : ''}
+              <div>🧂 芥末: ${order.wasabi} / 醬油: ${order.soy_sauce}</div>
+            </div>
+            ${order.note ? `<div class="note-box">📝 備註：${order.note}</div>` : ''}
+            <div class="items-box">${itemsHtml}</div>
+          </div>
+          <div>
+            <div class="total">金額: $${order.total_price}</div>
+            <div class="actions">
+              ${order.status === 'Pending' ? `<button class="btn btn-accept" onclick="updateStatus('${order.id}', 'Accepted')">接單</button>` : ''}
+              ${order.status === 'Accepted' ? `<button class="btn btn-complete" onclick="updateStatus('${order.id}', 'Completed')">完成</button>` : ''}
+              ${order.status !== 'Completed' && order.status !== 'Cancelled' ? `<button class="btn btn-cancel" onclick="updateStatus('${order.id}', 'Cancelled')">取消</button>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function updateStatus(id, status) {
+    await supabaseClient.from('orders').update({ status }).eq('id', id);
+    fetchOrders();
+  }
+
+  // 設定 Supabase 即時廣播監聽
+  supabaseClient
+    .channel('public:orders')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
+      playBeep();
+      fetchOrders();
+    })
+    .subscribe();
+
+  fetchOrders();
+</script>
+</body>
+</html>
