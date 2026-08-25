@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>米福壽司 - 線上點餐系統</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8f9fa; margin: 0; padding: 15px; padding-bottom: 90px; }
+        .container { max-width: 500px; margin: 0 auto; }
+        .header { background: #d32f2f; color: white; padding: 15px; border-radius: 10px; text-align: center; margin-bottom: 15px; }
+        .section-title { background: #333; color: white; padding: 8px 12px; border-radius: 6px; font-weight: bold; margin-top: 15px; }
+        .item-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .item-card { background: white; border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between; }
+        .item-name { font-size: 14px; font-weight: bold; color: #222; }
+        .item-price { color: #d32f2f; font-weight: bold; margin: 4px 0; }
+        .stepper { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+        .btn-step { background: #f0f0f0; border: 1px solid #ccc; width: 32px; height: 32px; border-radius: 4px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .form-card { background: white; padding: 15px; border-radius: 8px; margin-top: 15px; border: 1px solid #e0e0e0; }
+        .form-group { margin-bottom: 10px; }
+        .form-group label { font-size: 13px; font-weight: bold; color: #555; display: block; margin-bottom: 4px; }
+        .form-group input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #222; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.2); }
+        .submit-btn { background: #2e7d32; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2 style="margin:0;">米福壽司 🍣</h2>
+        <div style="font-size:12px; margin-top:4px;">10元經典 / 15元現做炙燒</div>
+    </div>
+
+    <div class="form-card">
+        <div class="form-group">
+            <label>取餐人姓名：</label>
+            <input type="text" id="cust-name" placeholder="請輸入姓名 (如：林先生)">
+        </div>
+        <div class="form-group">
+            <label>聯絡電話：</label>
+            <input type="tel" id="cust-phone" placeholder="請輸入手機號碼">
+        </div>
+        <div class="form-group">
+            <label>預計取餐時間：</label>
+            <input type="time" id="pickup-time">
+        </div>
+    </div>
+
+    <div class="section-title">經典 10 元區</div>
+    <div class="item-grid" id="list-10"></div>
+
+    <div class="section-title">上品 / 現做炙燒 15 元區</div>
+    <div class="item-grid" id="list-15"></div>
+</div>
+
+<div class="bottom-bar">
+    <div>
+        <div>共 <span id="total-count" style="color:#ffeb3b; font-weight:bold;">0</span> 贯</div>
+        <div style="font-size:18px; font-weight:bold;">小計: $<span id="total-price">0</span></div>
+    </div>
+    <button class="submit-btn" onclick="sendOrderToLine()">送出訂單</button>
+</div>
+
+<script>
+    const items10 = [
+        "1.煙燻鮭魚", "2.黃金魚片", "3.原味花枝", "4.原味章魚", "5.鮮蝦沙拉", "6.照燒雞腿", "7.櫻桃鴨肉", "8.鮑魚沙拉", "9.黑胡椒牛",
+        "10.起司魚卵", "11.起司火腿", "12.玉子燒", "13.蒲燒鯛魚", "14.豆皮壽司", "15.蟹肉沙拉", "16.珍味蝦卵", "17.珍味魚卵", "18.海帶芽",
+        "19.玉米沙拉", "20.鮪魚沙拉", "21.肉鬆沙拉", "22.魚卵沙拉", "23.干貝唇", "24.龍蝦沙拉", "25.味付雪貝", "26.蟹肉棒", "27.辣味螺肉",
+        "28.海瓜子", "29.海鮮沙拉", "30.泡菜花枝"
+    ];
+
+    const items15 = [
+        "A1.生鮭魚", "A2.生鯛魚", "A3.生鮪魚", "A4.生鮭魚肚", "A5.大蝦沙拉", "A6.起司蟹棒", "A7.明太子蝦",
+        "B1.炙燒鮭魚肚", "B2.焗烤牛肉", "B3.焗烤雞腿肉", "B4.焗烤蝦", "B5.焗烤章魚燒", "B6.焗烤玉子燒", "B7.炙燒龍蝦沙拉", "B8.炙燒鯛魚",
+        "B9.鳳梨蝦球", "B10.魚蛋沙拉"
+    ];
+
+    let cart = {};
+
+    function renderMenu() {
+        const div10 = document.getElementById('list-10');
+        const div15 = document.getElementById('list-15');
+        div10.innerHTML = "";
+        div15.innerHTML = "";
+
+        items10.forEach(name => {
+            cart[name] = 0;
+            div10.innerHTML += createCard(name, 10);
+        });
+
+        items15.forEach(name => {
+            cart[name] = 0;
+            div15.innerHTML += createCard(name, 15);
+        });
+    }
+
+    function createCard(name, price) {
+        return `
+            <div class="item-card">
+                <div>
+                    <div class="item-name">${name}</div>
+                    <div class="item-price">$${price}</div>
+                </div>
+                <div class="stepper">
+                    <button class="btn-step" onclick="updateQty('${name}', -1)">-</button>
+                    <span id="qty-${name}" style="font-weight:bold; font-size:16px;">0</span>
+                    <button class="btn-step" onclick="updateQty('${name}', 1)">+</button>
+                </div>
+            </div>
+        `;
+    }
+
+    function updateQty(name, delta) {
+        if (cart[name] + delta >= 0) {
+            cart[name] += delta;
+            document.getElementById(`qty-${name}`).innerText = cart[name];
+            calculateTotal();
+        }
+    }
+
+    function calculateTotal() {
+        let count = 0, total = 0;
+        for (let item in cart) {
+            let qty = cart[item];
+            let price = items10.includes(item) ? 10 : 15;
+            count += qty;
+            total += qty * price;
+        }
+        document.getElementById('total-count').innerText = count;
+        document.getElementById('total-price').innerText = total;
+    }
+
+    function sendOrderToLine() {
+        const name = document.getElementById('cust-name').value.trim();
+        const phone = document.getElementById('cust-phone').value.trim();
+        const time = document.getElementById('pickup-time').value;
+
+        if (!name || !phone || !time) {
+            alert('請完整填寫姓名、電話與預計取餐時間！');
+            return;
+        }
+
+        let totalCount = parseInt(document.getElementById('total-count').innerText);
+        if (totalCount === 0) {
+            alert('請至少選擇一貫壽司！');
+            return;
+        }
+
+        let count10 = 0, count15 = 0;
+        let itemsDetail = "";
+
+        for (let item in cart) {
+            if (cart[item] > 0) {
+                itemsDetail += `• ${item} x ${cart[item]}\n`;
+                if (items10.includes(item)) count10 += cart[item];
+                else count15 += cart[item];
+            }
+        }
+
+        let totalPrice = document.getElementById('total-price').innerText;
+
+        let messageText = `🍣【米福壽司 - 外帶預約單】\n` +
+                          `------------------------\n` +
+                          `👤 訂購人：${name}\n` +
+                          `📞 電話：${phone}\n` +
+                          `⏰ 取餐時間：${time}\n` +
+                          `------------------------\n` +
+                          `📋 點餐明細：\n${itemsDetail}` +
+                          `------------------------\n` +
+                          `📊 統計：10元(${count10}貫) / 15元(${count15}貫)\n` +
+                          `🔢 總貫數：${totalCount} 貫\n` +
+                          `💰 總金額：$${totalPrice} 元`;
+
+        alert('【預覽測試成功】\n送出後將發送以下內容至 LINE 聊天室：\n\n' + messageText);
+    }
+
+    // 直接執行，不等待網路或載入事件
+    renderMenu();
+</script>
+
+</body>
+</html>
