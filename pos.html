@@ -11,6 +11,8 @@
     .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
     .header h1 { margin: 0; font-size: 24px; color: #ff4d4f; }
     .status-badge { background: #2b2b36; padding: 6px 12px; border-radius: 20px; font-size: 13px; border: 1px solid #444; }
+    .btn-audio { background: #ff4d4f; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-left: 10px; font-weight: bold; transition: 0.3s; }
+    .btn-audio.active { background: #52c41a; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
     .card { background: #2b2b36; border-radius: 10px; border: 1px solid #3d3d4e; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; }
     .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3d3d4e; padding-bottom: 8px; margin-bottom: 10px; }
@@ -37,8 +39,8 @@
 <div class="header">
   <h1>米福壽司 POS 接單系統</h1>
   <div>
-    <span class="status-badge">⚡ 自動監聽中</span>
-    <button onclick="enableAudio()" style="background:#444; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; margin-left:10px;">🔊 啟用音效</button>
+    <span class="status-badge" id="listenStatus">⚡ 自動監聽中</span>
+    <button id="audioBtn" class="btn-audio" onclick="enableAudio()">🔔 點擊開啟音效 (測試音檔)</button>
   </div>
 </div>
 
@@ -52,21 +54,50 @@
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   let audioCtx = null;
+  let knownOrderIds = new Set();
+  let isFirstLoad = true;
+  let audioEnabled = false;
+
   function enableAudio() {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    alert('已啟用新訂單音效通知！');
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    audioEnabled = true;
+    const btn = document.getElementById('audioBtn');
+    btn.classList.add('active');
+    btn.innerText = '🔔 音效已開啟 (運作中)';
+    playBeep(); // 點擊時立即測試發音
   }
 
   function playBeep() {
-    if (!audioCtx) return;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = 880; // A5 音高
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.3);
+    if (!audioCtx || !audioEnabled) return;
+    try {
+      const now = audioCtx.currentTime;
+      // 第一聲高音
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(880, now); 
+      osc1.connect(gain1);
+      gain1.connect(audioCtx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.15);
+
+      // 第二聲更高音 (叮咚聲)
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1046.5, now + 0.2); 
+      osc2.connect(gain2);
+      gain2.connect(audioCtx.destination);
+      osc2.start(now + 0.2);
+      osc2.stop(now + 0.4);
+    } catch (e) {
+      console.error('播放音效失敗:', e);
+    }
   }
 
   async function fetchOrders() {
@@ -76,18 +107,35 @@
       .order('created_at', { ascending: false });
 
     if (error) return console.error(error);
+
+    // 比對是否有新寫入的 Pending 訂單
+    let hasNewOrder = false;
+    orders.forEach(order => {
+      if (!knownOrderIds.has(order.id)) {
+        knownOrderIds.add(order.id);
+        if (!isFirstLoad && order.status === 'Pending') {
+          hasNewOrder = true;
+        }
+      }
+    });
+
+    if (hasNewOrder) {
+      playBeep(); // 有新訂單跳出時自動響鈴
+    }
+
+    isFirstLoad = false;
     renderOrders(orders);
   }
 
   function renderOrders(orders) {
     const grid = document.getElementById('ordersGrid');
-    if (orders.length === 0) {
+    if (!orders || orders.length === 0) {
       grid.innerHTML = '<div style="color:#888;">目前沒有訂單</div>';
       return;
     }
 
     grid.innerHTML = orders.map(order => {
-      const itemsHtml = order.order_items.map(i => `
+      const itemsHtml = (order.order_items || []).map(i => `
         <div class="item-row">
           <span>${i.item_name}</span>
           <span>x ${i.quantity} ($${i.price * i.quantity})</span>
@@ -128,15 +176,18 @@
     fetchOrders();
   }
 
-  // 設定 Supabase 即時廣播監聽
+  // 1. 即時推播廣播監聽
   supabaseClient
     .channel('public:orders')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, payload => {
-      playBeep();
       fetchOrders();
     })
     .subscribe();
 
+  // 2. 背景定時掃描（每 5 秒檢查一次，雙重防護）
+  setInterval(fetchOrders, 5000);
+
+  // 初次載入
   fetchOrders();
 </script>
 </body>
