@@ -3,186 +3,242 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>米福壽司 - POS 接單與營收淨額報表系統</title>
+  <title>米福壽司 - 商業 POS 接單與營收管理系統</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-    body { background-color: #1e1e24; color: #fff; margin: 0; padding: 20px; }
-    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
-    .header h1 { margin: 0; font-size: 24px; color: #ff4d4f; }
-    .header-btns { display: flex; gap: 10px; align-items: center; }
-    .btn-pos-add { background: #fa8c16; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
-    .btn-audio { background: #ff4d4f; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.3s; }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; padding: 0; }
+    body { background-color: #18181c; color: #f0f0f2; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+    
+    /* 頂部導航列 */
+    .top-bar { height: 56px; background: #22222a; border-bottom: 1px solid #333340; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0; }
+    .brand { font-size: 20px; font-weight: bold; color: #ff4d4f; display: flex; align-items: center; gap: 8px; }
+    .nav-tabs { display: flex; gap: 8px; }
+    .tab-btn { background: #2c2c38; color: #aaa; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: all 0.2s; }
+    .tab-btn.active { background: #ff4d4f; color: #fff; }
+    .tab-btn:hover:not(.active) { background: #3a3a4c; color: #fff; }
+    
+    .status-area { display: flex; align-items: center; gap: 12px; }
+    .btn-audio { background: #ff4d4f; color: #fff; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 13px; }
     .btn-audio.active { background: #52c41a; }
-    .btn-audio.warning { animation: pulse 1.5s infinite; }
 
-    @keyframes pulse {
-      0% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.05); opacity: 0.8; }
-      100% { transform: scale(1); opacity: 1; }
-    }
+    /* 主視窗分頁容器 */
+    .tab-content { display: none; height: calc(100vh - 56px); }
+    .tab-content.active { display: flex; }
+
+    /* ========================================================= */
+    /* 1. POS 點餐介面 (快一點 / iChef 商業風格) */
+    /* ========================================================= */
+    .pos-container { display: flex; width: 100%; height: 100%; }
     
-    /* 報表控制區 */
-    .report-section { background: #2b2b36; border-radius: 10px; padding: 20px; margin-bottom: 25px; border: 1px solid #3d3d4e; }
-    .report-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
-    .date-picker, .rate-input { background: #1e1e24; color: #fff; border: 1px solid #555; padding: 6px 10px; border-radius: 6px; font-size: 14px; }
+    /* 左側分類列 */
+    .category-sidebar { width: 130px; background: #1e1e26; border-right: 1px solid #2e2e3e; display: flex; flex-direction: column; gap: 4px; padding: 10px; flex-shrink: 0; }
+    .cat-btn { background: transparent; color: #aaa; border: none; padding: 14px 8px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; text-align: center; transition: all 0.2s; }
+    .cat-btn.active { background: #fa8c16; color: #fff; }
+    .cat-btn:hover:not(.active) { background: #2a2a38; color: #fff; }
+
+    /* 中間菜單格狀區 */
+    .menu-grid-area { flex: 1; padding: 15px; overflow-y: auto; background: #141418; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); grid-auto-rows: 110px; gap: 12px; align-content: start; }
+    .menu-card { background: #242430; border: 1px solid #333345; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: transform 0.1s, border-color 0.2s; user-select: none; }
+    .menu-card:active { transform: scale(0.96); }
+    .menu-card:hover { border-color: #fa8c16; }
+    .menu-card-title { font-weight: bold; font-size: 15px; color: #fff; line-height: 1.3; }
+    .menu-card-price { font-size: 16px; font-weight: bold; color: #fa8c16; text-align: right; }
+
+    /* 右側購物車與結帳區 */
+    .cart-sidebar { width: 360px; background: #1f1f2a; border-left: 1px solid #2e2e3e; display: flex; flex-direction: column; flex-shrink: 0; }
+    .cart-header { padding: 15px; border-bottom: 1px solid #2e2e3e; background: #252533; }
+    .cart-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .order-type-select { width: 100%; background: #141418; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 6px; font-size: 14px; font-weight: bold; }
     
+    .cart-items-list { flex: 1; overflow-y: auto; padding: 12px; }
+    .cart-item { background: #282836; border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .cart-item-info { flex: 1; }
+    .cart-item-name { font-weight: bold; font-size: 14px; }
+    .cart-item-price { font-size: 12px; color: #aaa; margin-top: 2px; }
+    .cart-qty-controls { display: flex; align-items: center; gap: 8px; }
+    .btn-qty { width: 28px; height: 28px; background: #3a3a4c; border: none; color: #fff; border-radius: 4px; font-weight: bold; cursor: pointer; }
+    
+    .cart-options { padding: 12px 15px; background: #252533; border-top: 1px solid #2e2e3e; }
+    .option-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; }
+    .option-row select { background: #141418; color: #fff; border: 1px solid #444; padding: 4px 8px; border-radius: 4px; }
+
+    .cart-footer { padding: 15px; background: #1a1a24; border-top: 1px solid #2e2e3e; }
+    .cart-total-row { display: flex; justify-content: space-between; align-items: center; font-size: 20px; font-weight: bold; margin-bottom: 12px; }
+    .cart-total-amount { color: #fa8c16; font-size: 24px; }
+    .btn-checkout { width: 100%; background: #fa8c16; color: #fff; border: none; padding: 14px; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+    .btn-checkout:hover { background: #e0780c; }
+
+    /* ========================================================= */
+    /* 2. 即時訂單看板 (KDS / 出餐區) */
+    /* ========================================================= */
+    .kds-container { width: 100%; padding: 20px; overflow-y: auto; }
+    .kds-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .kds-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 15px; }
+    .kds-card { background: #242430; border-radius: 10px; border: 1px solid #333345; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; }
+    .kds-card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333345; padding-bottom: 8px; margin-bottom: 8px; }
+    .kds-badge { font-size: 12px; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+    .kds-badge.熊貓外送 { background: #ffe6eb; color: #ff2b56; }
+    .kds-badge.門市POS散點 { background: #fff7e6; color: #fa8c16; }
+    .kds-badge.線上預訂 { background: #e6f7ff; color: #1890ff; }
+    .kds-items { background: #181820; border-radius: 6px; padding: 8px; margin: 8px 0; max-height: 140px; overflow-y: auto; font-size: 13px; }
+    .kds-item-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #2a2a35; }
+    .kds-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .btn-act { flex: 1; padding: 8px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .btn-act.accept { background: #52c41a; color: #fff; }
+    .btn-act.complete { background: #1890ff; color: #fff; }
+    .btn-act.cancel { background: #444; color: #fff; }
+
+    /* ========================================================= */
+    /* 3. 報表與統計區 */
+    /* ========================================================= */
+    .report-container { width: 100%; padding: 20px; overflow-y: auto; }
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
-    .stat-card { background: #1e1e24; border-radius: 8px; padding: 12px 15px; border-left: 4px solid #888; }
-    .stat-card.total { border-color: #4caf50; }
+    .stat-card { background: #242430; border-radius: 8px; padding: 12px 15px; border-left: 4px solid #888; }
+    .stat-card.total { border-color: #52c41a; }
     .stat-card.panda-gross { border-color: #ff2b56; }
     .stat-card.panda-net { border-color: #e91e63; }
     .stat-card.online { border-color: #1890ff; }
     .stat-card.pos { border-color: #fa8c16; }
     .stat-title { font-size: 12px; color: #aaa; margin-bottom: 4px; }
     .stat-value { font-size: 20px; font-weight: bold; }
-    .stat-sub { font-size: 11px; color: #888; margin-top: 3px; }
 
-    /* 每日營業額表格 */
-    .table-container { max-height: 220px; overflow-y: auto; background: #1e1e24; border-radius: 6px; }
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
-    th, td { padding: 8px 12px; border-bottom: 1px solid #333; }
-    th { background-color: #333342; position: sticky; top: 0; color: #ddd; }
-    
-    /* 訂單卡片區 */
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 15px; }
-    .card { background: #2b2b36; border-radius: 10px; border: 1px solid #3d3d4e; padding: 15px; display: flex; flex-direction: column; justify-content: space-between; }
-    .card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #3d3d4e; padding-bottom: 8px; margin-bottom: 10px; }
-    .order-id { font-weight: bold; color: #ff4d4f; }
-    .order-type { font-size: 12px; padding: 2px 8px; border-radius: 4px; font-weight: bold; background: #e6f7ff; color: #1890ff; }
-    .order-type.熊貓外送 { background: #ffe6eb; color: #ff2b56; }
-    .order-type.門市POS散點 { background: #fff7e6; color: #fa8c16; }
-    .cust-info { font-size: 14px; margin-bottom: 10px; line-height: 1.5; color: #ddd; }
-    .items-box { background: #1e1e24; border-radius: 6px; padding: 10px; margin-bottom: 10px; max-height: 120px; overflow-y: auto; font-size: 13px; }
-    .item-row { display: flex; justify-content: space-between; border-bottom: 1px dashed #333; padding: 4px 0; }
-    .total { text-align: right; font-size: 15px; font-weight: bold; color: #ff4d4f; margin-bottom: 10px; }
-    .actions { display: flex; gap: 8px; }
-    .btn { flex: 1; padding: 8px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
-    .btn-accept { background: #52c41a; color: white; }
-    .btn-complete { background: #1890ff; color: white; }
-    .btn-cancel { background: #555; color: white; }
-
-    /* Modal */
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); justify-content: center; align-items: center; z-index: 1000; }
-    .modal-content { background: #2b2b36; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; border: 1px solid #444; max-height: 90vh; overflow-y: auto; }
-    .modal-title { font-size: 20px; font-weight: bold; color: #fa8c16; margin-bottom: 15px; display: flex; justify-content: space-between; }
-    .menu-item-row { display: flex; justify-content: space-between; align-items: center; background: #1e1e24; padding: 10px; border-radius: 6px; margin-bottom: 8px; }
-    .qty-btn { background: #444; color: #fff; border: none; width: 28px; height: 28px; border-radius: 4px; font-weight: bold; cursor: pointer; }
-    .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; font-size: 13px; color: #aaa; margin-bottom: 4px; }
-    .form-control { width: 100%; background: #1e1e24; border: 1px solid #555; color: #fff; padding: 8px; border-radius: 6px; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; background: #242430; border-radius: 8px; overflow: hidden; }
+    th, td { padding: 10px 14px; border-bottom: 1px solid #333345; }
+    th { background: #2c2c3a; color: #aaa; }
+    tr.selected-day { background: #3d3118; }
   </style>
 </head>
 <body onclick="autoEnableAudio()">
 
-<div class="header">
-  <h1>米福壽司 POS 接單與營收淨額系統</h1>
-  <div class="header-btns">
-    <button class="btn-pos-add" onclick="openPosModal()">➕ 門市現場散點/補單</button>
-    <button id="audioBtn" class="btn-audio warning" onclick="enableAudio(true)">🔔 點擊開啟音效 (未啟用)</button>
+<div class="top-bar">
+  <div class="brand">🍣 米福壽司 POS</div>
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('pos')">🏪 商業 POS 點餐</button>
+    <button class="tab-btn" onclick="switchTab('kds')">📋 即時訂單看板</button>
+    <button class="tab-btn" onclick="switchTab('report')">📊 營收淨額報表</button>
+  </div>
+  <div class="status-area">
+    <button id="audioBtn" class="btn-audio" onclick="enableAudio(true)">🔔 點擊開啟音效</button>
   </div>
 </div>
 
-<!-- 📊 營收統計與日期篩選區 -->
-<div class="report-section">
-  <div class="report-header">
-    <h2 style="margin:0; font-size:18px;">📈 營業額與實收淨額報表</h2>
-    <div style="display:flex; gap:15px; align-items:center;">
-      <div>
-        <label style="font-size:13px; color:#ccc;">🐼 熊貓抽成 %：</label>
-        <input type="number" id="pandaRateInput" class="rate-input" value="30" style="width:60px;" onchange="renderReport()"> %
+<div id="tab-pos" class="tab-content active">
+  <div class="pos-container">
+    <div class="category-sidebar">
+      <button class="cat-btn active" onclick="filterCategory('ALL', this)">全部餐點</button>
+      <button class="cat-btn" onclick="filterCategory('握壽司', this)">握壽司/肉類</button>
+      <button class="cat-btn" onclick="filterCategory('炙燒', this)">炙燒特選</button>
+      <button class="cat-btn" onclick="filterCategory('沙拉', this)">沙拉/小菜</button>
+    </div>
+
+    <div class="menu-grid-area" id="menuGrid"></div>
+
+    <div class="cart-sidebar">
+      <div class="cart-header">
+        <div class="cart-title">
+          <span>🛒 當前點餐單</span>
+          <button style="background:none; border:none; color:#ff4d4f; cursor:pointer; font-size:12px;" onclick="clearCart()">清空</button>
+        </div>
+        <select id="posOrderType" class="order-type-select">
+          <option value="門市POS散點">🏪 門市現場散點</option>
+          <option value="熊貓外送">🐼 熊貓 (Foodpanda 補單)</option>
+          <option value="線上預訂">🌐 線上預訂外帶</option>
+        </select>
       </div>
-      <div>
-        <label style="font-size:13px; color:#ccc;">月份：</label>
-        <input type="month" id="monthPicker" class="date-picker" onchange="renderReport()">
+
+      <div class="cart-items-list" id="cartItemsList">
+        <div style="color:#666; text-align:center; margin-top:40px;">點擊左側餐點加入購物車</div>
+      </div>
+
+      <div class="cart-options">
+        <div class="option-row">
+          <span>芥末偏好：</span>
+          <select id="wasabiOpt"><option value="正常">正常</option><option value="多">多</option><option value="少">少</option><option value="不要">不要</option></select>
+        </div>
+        <div class="option-row">
+          <span>醬油偏好：</span>
+          <select id="soyOpt"><option value="正常">正常</option><option value="多">多</option><option value="少">少</option><option value="不要">不要</option></select>
+        </div>
+      </div>
+
+      <div class="cart-footer">
+        <div class="cart-total-row">
+          <span>合計總金額</span>
+          <span class="cart-total-amount" id="cartTotalText">$0</span>
+        </div>
+        <button class="btn-checkout" onclick="submitPosOrder()">結帳開單 (寫入庫)</button>
       </div>
     </div>
   </div>
+</div>
 
-  <div class="stats-grid">
-    <div class="stat-card total">
-      <div class="stat-title">全店實際總淨收入 (實收)</div>
-      <div class="stat-value" id="statGrandNet" style="color:#4caf50;">$0</div>
-      <div class="stat-sub">已扣除熊貓抽成</div>
+<div id="tab-kds" class="tab-content">
+  <div class="kds-container">
+    <div class="kds-header">
+      <h2>📋 即時出餐看板</h2>
+      <span id="currentDateDisplay" style="color:#aaa; font-size:14px;"></span>
     </div>
-    <div class="stat-card panda-gross">
-      <div class="stat-title">🐼 熊貓原始營業額 (毛額)</div>
-      <div class="stat-value" id="statPandaGross" style="color:#ff2b56;">$0</div>
-      <div class="stat-sub" id="statPandaFee">抽成扣除: $0</div>
-    </div>
-    <div class="stat-card panda-net">
-      <div class="stat-title">🐼 熊貓實際撥款 (淨額)</div>
-      <div class="stat-value" id="statPandaNet" style="color:#e91e63;">$0</div>
-      <div class="stat-sub">入帳估計金額</div>
-    </div>
-    <div class="stat-card online">
-      <div class="stat-title">🌐 線上點餐 / 外帶</div>
-      <div class="stat-value" id="statOnline" style="color:#1890ff;">$0</div>
-      <div class="stat-sub">100% 實收</div>
-    </div>
-    <div class="stat-card pos">
-      <div class="stat-title">🏪 門市 POS 現場散點</div>
-      <div class="stat-value" id="statPos" style="color:#fa8c16;">$0</div>
-      <div class="stat-sub">100% 實收</div>
+    <div class="kds-grid" id="ordersGrid">
+      <div style="color:#888;">載入訂單中...</div>
     </div>
   </div>
+</div>
 
-  <!-- 每日營業額明細表 -->
-  <div class="table-container">
+<div id="tab-report" class="tab-content">
+  <div class="report-container">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <h2>📊 營業額與實收淨額報表</h2>
+      <div style="display:flex; gap:15px; align-items:center;">
+        <div>
+          <label style="color:#aaa; font-size:13px;">🐼 熊貓抽成 %：</label>
+          <input type="number" id="pandaRateInput" value="30" style="width:50px; background:#141418; color:#fff; border:1px solid #444; padding:4px; border-radius:4px;" onchange="renderReport()"> %
+        </div>
+        <div>
+          <label style="color:#aaa; font-size:13px;">選擇日期：</label>
+          <input type="date" id="datePicker" style="background:#141418; color:#fff; border:1px solid #444; padding:4px 8px; border-radius:4px;" onchange="fetchOrders()">
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card total">
+        <div class="stat-title">全店實際總淨收入 (實收)</div>
+        <div class="stat-value" id="statGrandNet" style="color:#52c41a;">$0</div>
+      </div>
+      <div class="stat-card panda-gross">
+        <div class="stat-title">🐼 熊貓原始營業額 (毛額)</div>
+        <div class="stat-value" id="statPandaGross" style="color:#ff2b56;">$0</div>
+      </div>
+      <div class="stat-card panda-net">
+        <div class="stat-title">🐼 熊貓實際撥款 (淨額)</div>
+        <div class="stat-value" id="statPandaNet" style="color:#e91e63;">$0</div>
+      </div>
+      <div class="stat-card online">
+        <div class="stat-title">🌐 線上點餐 / 外帶</div>
+        <div class="stat-value" id="statOnline" style="color:#1890ff;">$0</div>
+      </div>
+      <div class="stat-card pos">
+        <div class="stat-title">🏪 門市 POS 現場散點</div>
+        <div class="stat-value" id="statPos" style="color:#fa8c16;">$0</div>
+      </div>
+    </div>
+
     <table>
       <thead>
         <tr>
           <th>日期 (年月日)</th>
           <th>🐼 熊貓毛額</th>
-          <th>🐼 熊貓扣％抽成</th>
-          <th>🐼 熊貓實收淨額</th>
+          <th>🐼 抽成扣除</th>
+          <th>🐼 熊貓淨額</th>
           <th>🌐 線上/外帶</th>
           <th>🏪 POS 散點</th>
           <th>當日全店實收總計</th>
         </tr>
       </thead>
       <tbody id="dailyTableBody">
-        <tr><td colspan="7" style="text-align:center; color:#888;">載入資料中...</td></tr>
+        <tr><td colspan="7" style="text-align:center; color:#888;">載入中...</td></tr>
       </tbody>
     </table>
-  </div>
-</div>
-
-<h2 style="font-size:18px; margin-bottom:15px;">📋 即時訂單列表</h2>
-<div class="grid" id="ordersGrid">
-  <div style="color: #888;">正在載入訂單...</div>
-</div>
-
-<!-- Modal -->
-<div class="modal-overlay" id="posModal">
-  <div class="modal-content">
-    <div class="modal-title">
-      <span>🏪 門市現場散點 / 補單</span>
-      <span style="cursor:pointer; color:#aaa;" onclick="closePosModal()">✕</span>
-    </div>
-
-    <div class="form-group">
-      <label>訂單來源管道</label>
-      <select id="posOrderType" class="form-control">
-        <option value="門市POS散點">🏪 門市POS散點 (現場客)</option>
-        <option value="熊貓外送">🐼 熊貓 (Foodpanda 外補單)</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label>選擇菜單餐點</label>
-      <div id="menuItemsContainer"></div>
-    </div>
-
-    <div style="border-top:1px solid #444; padding-top:10px; margin-top:10px; text-align:right;">
-      <span style="font-size:14px; color:#aaa;">合計金額：</span>
-      <span id="posTotalAmount" style="font-size:22px; font-weight:bold; color:#fa8c16;">$0</span>
-    </div>
-
-    <div style="display:flex; gap:10px; margin-top:15px;">
-      <button class="btn btn-cancel" onclick="closePosModal()">取消</button>
-      <button class="btn btn-accept" style="background:#fa8c16;" onclick="submitPosOrder()">完成開單 (寫入庫)</button>
-    </div>
   </div>
 </div>
 
@@ -191,143 +247,167 @@
   const SUPABASE_KEY = 'sb_publishable_m7MorN4F4WnGngacYoqSWQ_fPP0zVyv';
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+  // 菜單資料庫
+  const menuList = [
+    { name: '1.煙燻鮭魚', price: 20, cat: '握壽司' },
+    { name: '5.鮮蝦沙拉', price: 20, cat: '沙拉' },
+    { name: '7.櫻花鴨肉', price: 30, cat: '握壽司' },
+    { name: '26.蟹肉棒', price: 30, cat: '握壽司' },
+    { name: 'B6.焗烤玉子燒', price: 60, cat: '炙燒' },
+    { name: 'B7.炙燒龍蝦沙拉', price: 45, cat: '炙燒' },
+    { name: 'B10.魚蛋沙拉', price: 75, cat: '沙拉' }
+  ];
+
+  let cart = {};
   let allOrders = [];
   let audioCtx = null;
   let knownOrderIds = new Set();
   let isFirstLoad = true;
   let audioEnabled = false;
 
-  const presetMenu = [
-    { name: '1.煙燻鮭魚', price: 20 },
-    { name: '5.鮮蝦沙拉', price: 20 },
-    { name: '7.櫻花鴨肉', price: 30 },
-    { name: '26.蟹肉棒', price: 30 },
-    { name: 'B6.焗烤玉子燒', price: 60 },
-    { name: 'B7.炙燒龍蝦沙拉', price: 45 },
-    { name: 'B10.魚蛋沙拉', price: 75 }
-  ];
-
-  let currentCart = {};
-
-  const today = new Date();
-  document.getElementById('monthPicker').value = today.toISOString().substring(0, 7);
-
-  // 點擊頁面任何地方自動解鎖音效權限
-  async function autoEnableAudio() {
-    if (!audioEnabled) {
-      await enableAudio(false);
-    }
+  function toLocalDateStr(date) {
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
-  async function enableAudio(playTestBeep = true) {
+  document.getElementById('datePicker').value = toLocalDateStr(new Date());
+
+  // 音效機制
+  async function autoEnableAudio() {
+    if (!audioEnabled) await enableAudio(false);
+  }
+
+  async function enableAudio(playTest = true) {
     try {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioCtx.state === 'suspended') {
-        await audioCtx.resume();
-      }
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') await audioCtx.resume();
       audioEnabled = true;
 
       const btn = document.getElementById('audioBtn');
-      btn.classList.remove('warning');
       btn.classList.add('active');
-      btn.innerText = '🔔 音效已自動開啟';
-
-      if (playTestBeep) playBeep();
-    } catch (e) {
-      console.log('音效解鎖嘗試中...', e);
-    }
+      btn.innerText = '🔔 音效已開啟';
+      if (playTest) playBeep();
+    } catch (e) {}
   }
 
   function playBeep() {
     if (!audioCtx) return;
-    
-    // 如果 Context 被掛起，嘗試復甦
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
-
     try {
       const now = audioCtx.currentTime;
-      // 發出雙音階「叮咚」提醒聲
       const osc1 = audioCtx.createOscillator();
       const osc2 = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
 
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(880, now); // 叮
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(1174.66, now + 0.15); // 咚
+      osc1.type = 'sine'; osc1.frequency.setValueAtTime(880, now);
+      osc2.type = 'sine'; osc2.frequency.setValueAtTime(1174.66, now + 0.15);
 
-      gain.gain.setValueAtTime(0.6, now);
+      gain.gain.setValueAtTime(0.5, now);
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
 
-      osc1.connect(gain);
-      osc2.connect(gain);
-      gain.connect(audioCtx.destination);
+      osc1.connect(gain); osc2.connect(gain); gain.connect(audioCtx.destination);
+      osc1.start(now); osc1.stop(now + 0.15);
+      osc2.start(now + 0.15); osc2.stop(now + 0.5);
+    } catch (e) {}
+  }
 
-      osc1.start(now);
-      osc1.stop(now + 0.15);
-      osc2.start(now + 0.15);
-      osc2.stop(now + 0.5);
-    } catch (e) {
-      console.error('播放音效失敗:', e);
+  // 切換分頁
+  function switchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+    event.target.classList.add('active');
+    document.getElementById(`tab-${tabName}`).classList.add('active');
+  }
+
+  // 渲染菜單
+  function renderMenuGrid(catFilter = 'ALL') {
+    const container = document.getElementById('menuGrid');
+    const filtered = catFilter === 'ALL' ? menuList : menuList.filter(item => item.cat === catFilter);
+
+    container.innerHTML = filtered.map(item => `
+      <div class="menu-card" onclick="addToCart('${item.name}')">
+        <div class="menu-card-title">${item.name}</div>
+        <div class="menu-card-price">$${item.price}</div>
+      </div>
+    `).join('');
+  }
+
+  function filterCategory(cat, btn) {
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderMenuGrid(cat);
+  }
+
+  // 購物車邏輯
+  function addToCart(name) {
+    cart[name] = (cart[name] || 0) + 1;
+    renderCart();
+  }
+
+  function changeCartQty(name, delta) {
+    if (!cart[name]) return;
+    cart[name] += delta;
+    if (cart[name] <= 0) delete cart[name];
+    renderCart();
+  }
+
+  function clearCart() {
+    cart = {};
+    renderCart();
+  }
+
+  function renderCart() {
+    const container = document.getElementById('cartItemsList');
+    const entries = Object.entries(cart);
+
+    if (entries.length === 0) {
+      container.innerHTML = '<div style="color:#666; text-align:center; margin-top:40px;">點擊左側餐點加入購物車</div>';
+      document.getElementById('cartTotalText').innerText = '$0';
+      return;
     }
-  }
 
-  function openPosModal() {
-    currentCart = {};
-    renderMenuPicker();
-    document.getElementById('posModal').style.display = 'flex';
-  }
+    let grandTotal = 0;
+    container.innerHTML = entries.map(([name, qty]) => {
+      const item = menuList.find(m => m.name === name);
+      const subtotal = item.price * qty;
+      grandTotal += subtotal;
 
-  function closePosModal() {
-    document.getElementById('posModal').style.display = 'none';
-  }
-
-  function renderMenuPicker() {
-    const container = document.getElementById('menuItemsContainer');
-    let total = 0;
-
-    container.innerHTML = presetMenu.map((item) => {
-      const qty = currentCart[item.name] || 0;
-      total += qty * item.price;
       return `
-        <div class="menu-item-row">
-          <div><b>${item.name}</b> <span style="color:#aaa;">($${item.price})</span></div>
-          <div style="display:flex; gap:8px; align-items:center;">
-            <button class="qty-btn" onclick="changeQty('${item.name}', -1)">-</button>
-            <span style="width:20px; text-align:center;">${qty}</span>
-            <button class="qty-btn" onclick="changeQty('${item.name}', 1)">+</button>
+        <div class="cart-item">
+          <div class="cart-item-info">
+            <div class="cart-item-name">${name}</div>
+            <div class="cart-item-price">$${item.price} × ${qty} = $${subtotal}</div>
+          </div>
+          <div class="cart-qty-controls">
+            <button class="btn-qty" onclick="changeCartQty('${name}', -1)">-</button>
+            <span style="font-weight:bold; min-width:18px; text-align:center;">${qty}</span>
+            <button class="btn-qty" onclick="changeCartQty('${name}', 1)">+</button>
           </div>
         </div>
       `;
     }).join('');
 
-    document.getElementById('posTotalAmount').innerText = `$${total}`;
+    document.getElementById('cartTotalText').innerText = `$${grandTotal}`;
   }
 
-  function changeQty(name, delta) {
-    const current = currentCart[name] || 0;
-    const newQty = Math.max(0, current + delta);
-    if (newQty === 0) delete currentCart[name];
-    else currentCart[name] = newQty;
-    renderMenuPicker();
-  }
-
+  // 送出 POS 訂單
   async function submitPosOrder() {
-    const type = document.getElementById('posOrderType').value;
-    const cartEntries = Object.entries(currentCart);
-
-    if (cartEntries.length === 0) {
-      alert('請至少選擇一項餐點！');
+    const entries = Object.entries(cart);
+    if (entries.length === 0) {
+      alert('購物車是空的，請先選擇餐點！');
       return;
     }
 
+    const orderType = document.getElementById('posOrderType').value;
+    const wasabi = document.getElementById('wasabiOpt').value;
+    const soy = document.getElementById('soyOpt').value;
+
     let totalPrice = 0;
-    cartEntries.forEach(([name, qty]) => {
-      const found = presetMenu.find(m => m.name === name);
+    entries.forEach(([name, qty]) => {
+      const found = menuList.find(m => m.name === name);
       if (found) totalPrice += found.price * qty;
     });
 
@@ -335,40 +415,48 @@
       .from('orders')
       .insert([{
         customer_name: '現場門市散點',
-        order_type: type,
+        order_type: orderType,
         status: 'Completed',
         total_price: totalPrice,
-        wasabi: '正常',
-        soy_sauce: '正常'
+        wasabi: wasabi,
+        soy_sauce: soy
       }])
       .select().single();
 
     if (error) {
-      alert('開單失敗：' + error.message);
+      alert('結帳失敗：' + error.message);
       return;
     }
 
-    const itemsToInsert = cartEntries.map(([name, qty]) => {
-      const found = presetMenu.find(m => m.name === name);
+    const itemsToInsert = entries.map(([name, qty]) => {
+      const found = menuList.find(m => m.name === name);
       return { order_id: order.id, item_name: name, quantity: qty, price: found ? found.price : 0 };
     });
 
     await supabaseClient.from('order_items').insert(itemsToInsert);
 
-    closePosModal();
+    clearCart();
     fetchOrders();
+    alert('🎉 結帳開單成功！');
   }
 
+  // 抓取訂單資料
   async function fetchOrders() {
+    const selectedDateStr = document.getElementById('datePicker').value || toLocalDateStr(new Date());
+    const selectedMonthStr = selectedDateStr.substring(0, 7);
+    const startOfMonth = `${selectedMonthStr}-01T00:00:00`;
+
     const { data: orders, error } = await supabaseClient
       .from('orders')
       .select('*, order_items(*)')
+      .gte('created_at', startOfMonth)
       .order('created_at', { ascending: false });
 
     if (error) return console.error(error);
 
     allOrders = orders || [];
 
+    // 新訂單聲音邏輯
     let hasNewOrder = false;
     allOrders.forEach(order => {
       if (!knownOrderIds.has(order.id)) {
@@ -377,19 +465,64 @@
       }
     });
 
-    if (hasNewOrder) {
-      playBeep();
-    }
+    if (hasNewOrder) playBeep();
     isFirstLoad = false;
 
-    renderOrders(allOrders);
+    // 即時訂單列表（當日跨日自動歸零）
+    const targetDayOrders = allOrders.filter(order => toLocalDateStr(order.created_at) === selectedDateStr);
+    document.getElementById('currentDateDisplay').innerText = `顯示日期：${selectedDateStr}`;
+
+    renderKdsOrders(targetDayOrders);
     renderReport();
   }
 
+  // 渲染 KDS 出餐看板
+  function renderKdsOrders(orders) {
+    const grid = document.getElementById('ordersGrid');
+    if (!orders || orders.length === 0) {
+      grid.innerHTML = '<div style="color:#888;">當日尚無訂單</div>';
+      return;
+    }
+
+    grid.innerHTML = orders.map(order => {
+      const itemsHtml = (order.order_items || []).map(i => `
+        <div class="kds-item-row">
+          <span>${i.item_name}</span>
+          <span>x ${i.quantity} ($${i.price * i.quantity})</span>
+        </div>
+      `).join('');
+
+      return `
+        <div class="kds-card" style="${order.status === 'Completed' ? 'opacity:0.55' : ''}">
+          <div>
+            <div class="kds-card-header">
+              <span style="font-weight:bold; color:#ff4d4f;">#${order.id.substring(0, 8)}</span>
+              <span class="kds-badge ${order.order_type}">${order.order_type} (${order.status})</span>
+            </div>
+            <div style="font-size:13px; color:#ccc;">
+              👤 <b>${order.customer_name || '現場顧客'}</b> ${order.customer_phone ? `(${order.customer_phone})` : ''}
+              <div>🧂 芥末: ${order.wasabi || '正常'} / 醬油: ${order.soy_sauce || '正常'}</div>
+            </div>
+            <div class="kds-items">${itemsHtml}</div>
+          </div>
+          <div>
+            <div style="text-align:right; font-weight:bold; color:#fa8c16; font-size:16px;">金額: $${order.total_price}</div>
+            <div class="kds-actions">
+              ${order.status === 'Pending' ? `<button class="btn-act accept" onclick="updateStatus('${order.id}', 'Accepted')">接單</button>` : ''}
+              ${order.status === 'Accepted' ? `<button class="btn-act complete" onclick="updateStatus('${order.id}', 'Completed')">完成</button>` : ''}
+              ${order.status !== 'Completed' && order.status !== 'Cancelled' ? `<button class="btn-act cancel" onclick="updateStatus('${order.id}', 'Cancelled')">取消</button>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // 渲染營收報表
   function renderReport() {
-    const selectedMonth = document.getElementById('monthPicker').value;
+    const selectedDateStr = document.getElementById('datePicker').value || toLocalDateStr(new Date());
+    const selectedMonthStr = selectedDateStr.substring(0, 7);
     const pandaRate = parseFloat(document.getElementById('pandaRateInput').value || '30') / 100;
-    if (!selectedMonth) return;
 
     let pandaGrossMonth = 0, onlineMonth = 0, posMonth = 0;
     const dailyMap = {};
@@ -397,12 +530,9 @@
     allOrders.forEach(order => {
       if (order.status === 'Cancelled' || order.status === 'cancelled') return;
 
-      const createdAt = new Date(order.created_at);
-      const dateStr = createdAt.toISOString().split('T')[0];
-      const monthStr = dateStr.substring(0, 7);
-
-      if (monthStr === selectedMonth) {
-        const amount = Number(order.total_price || order.total_amount || 0);
+      const dateStr = toLocalDateStr(order.created_at);
+      if (dateStr.substring(0, 7) === selectedMonthStr) {
+        const amount = Number(order.total_price || 0);
         const type = (order.order_type || '').toLowerCase();
 
         if (!dailyMap[dateStr]) dailyMap[dateStr] = { pandaGross: 0, online: 0, pos: 0 };
@@ -420,14 +550,12 @@
       }
     });
 
-    // 熊貓抽成與實收計算
     const pandaFeeMonth = Math.round(pandaGrossMonth * pandaRate);
     const pandaNetMonth = pandaGrossMonth - pandaFeeMonth;
     const grandNetMonth = onlineMonth + posMonth + pandaNetMonth;
 
     document.getElementById('statGrandNet').innerText = `$${grandNetMonth.toLocaleString()}`;
     document.getElementById('statPandaGross').innerText = `$${pandaGrossMonth.toLocaleString()}`;
-    document.getElementById('statPandaFee').innerText = `抽成扣除 (${Math.round(pandaRate*100)}%): -$${pandaFeeMonth.toLocaleString()}`;
     document.getElementById('statPandaNet').innerText = `$${pandaNetMonth.toLocaleString()}`;
     document.getElementById('statOnline').innerText = `$${onlineMonth.toLocaleString()}`;
     document.getElementById('statPos').innerText = `$${posMonth.toLocaleString()}`;
@@ -445,59 +573,18 @@
       const pFee = Math.round(d.pandaGross * pandaRate);
       const pNet = d.pandaGross - pFee;
       const dayNetTotal = d.online + d.pos + pNet;
+      const isSelected = (date === selectedDateStr);
 
       return `
-        <tr>
-          <td><b>${date}</b></td>
+        <tr class="${isSelected ? 'selected-day' : ''}">
+          <td><b>${date}</b> ${isSelected ? '📍' : ''}</td>
           <td style="color:#ff2b56;">$${d.pandaGross.toLocaleString()}</td>
           <td style="color:#aaa;">-$${pFee.toLocaleString()}</td>
           <td style="color:#e91e63; font-weight:bold;">$${pNet.toLocaleString()}</td>
           <td style="color:#1890ff;">$${d.online.toLocaleString()}</td>
           <td style="color:#fa8c16;">$${d.pos.toLocaleString()}</td>
-          <td style="color:#4caf50; font-weight:bold;">$${dayNetTotal.toLocaleString()}</td>
+          <td style="color:#52c41a; font-weight:bold;">$${dayNetTotal.toLocaleString()}</td>
         </tr>
-      `;
-    }).join('');
-  }
-
-  function renderOrders(orders) {
-    const grid = document.getElementById('ordersGrid');
-    if (!orders || orders.length === 0) {
-      grid.innerHTML = '<div style="color:#888;">目前沒有訂單</div>';
-      return;
-    }
-
-    grid.innerHTML = orders.map(order => {
-      const itemsHtml = (order.order_items || []).map(i => `
-        <div class="item-row">
-          <span>${i.item_name}</span>
-          <span>x ${i.quantity} ($${i.price * i.quantity})</span>
-        </div>
-      `).join('');
-
-      return `
-        <div class="card" style="${order.status === 'Completed' ? 'opacity:0.5' : ''}">
-          <div>
-            <div class="card-header">
-              <span class="order-id">#${order.id.substring(0, 8)}</span>
-              <span class="order-type ${order.order_type}">${order.order_type} (${order.status})</span>
-            </div>
-            <div class="cust-info">
-              <div>👤 <b>${order.customer_name || '現場顧客'}</b> ${order.customer_phone ? `(${order.customer_phone})` : ''}</div>
-              <div>🧂 芥末: ${order.wasabi || '正常'} / 醬油: ${order.soy_sauce || '正常'}</div>
-            </div>
-            ${order.note ? `<div style="font-size:12px; color:#ffc107; background:#3a321d; padding:4px 8px; border-radius:4px; margin-bottom:8px;">📝 ${order.note}</div>` : ''}
-            <div class="items-box">${itemsHtml}</div>
-          </div>
-          <div>
-            <div class="total">金額: $${order.total_price}</div>
-            <div class="actions">
-              ${order.status === 'Pending' ? `<button class="btn btn-accept" onclick="updateStatus('${order.id}', 'Accepted')">接單</button>` : ''}
-              ${order.status === 'Accepted' ? `<button class="btn btn-complete" onclick="updateStatus('${order.id}', 'Completed')">完成</button>` : ''}
-              ${order.status !== 'Completed' && order.status !== 'Cancelled' ? `<button class="btn btn-cancel" onclick="updateStatus('${order.id}', 'Cancelled')">取消</button>` : ''}
-            </div>
-          </div>
-        </div>
       `;
     }).join('');
   }
@@ -507,6 +594,8 @@
     fetchOrders();
   }
 
+  // 初始化
+  renderMenuGrid('ALL');
   supabaseClient.channel('public:orders').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, fetchOrders).subscribe();
   setInterval(fetchOrders, 5000);
   fetchOrders();
