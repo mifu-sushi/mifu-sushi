@@ -2,291 +2,450 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>米福壽司 - 線上點餐系統</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>米福壽司 - 線上點餐</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #f8f9fa; margin: 0; padding: 15px; padding-bottom: 110px; color: #333; }
-    .container { max-width: 600px; margin: 0 auto; }
-    .header { background: #d32f2f; color: white; padding: 20px 15px; border-radius: 12px; text-align: center; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .header h1 { margin: 0; font-size: 24px; }
-    .header p { margin: 5px 0 0; font-size: 14px; opacity: 0.9; }
-    .card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .card-title { font-size: 16px; font-weight: bold; margin-bottom: 12px; color: #d32f2f; }
-    .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #555; }
-    .form-control { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; outline: none; }
-    .radio-group { display: flex; gap: 10px; margin-top: 5px; }
-    .radio-label { flex: 1; text-align: center; padding: 10px; background: #f0f0f0; border-radius: 6px; font-size: 14px; cursor: pointer; border: 1px solid #ddd; font-weight: bold; }
-    .radio-group input[type="radio"] { display: none; }
-    .radio-group input[type="radio"]:checked + .radio-label { background: #d32f2f; color: white; border-color: #d32f2f; }
-    .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
-    .item-card { border: 1px solid #eee; border-radius: 8px; padding: 10px; background: #fff; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
-    .item-img { width: 100%; height: 110px; object-fit: cover; border-radius: 6px; background-color: #f0f0f0; margin-bottom: 8px; }
-    .item-name { font-size: 14px; font-weight: bold; margin-bottom: 4px; }
-    .item-price { color: #d32f2f; font-weight: bold; font-size: 13px; margin-bottom: 8px; }
-    .stepper { display: flex; align-items: center; justify-content: space-between; background: #f9f9f9; border-radius: 6px; padding: 2px; border: 1px solid #e0e0e0; }
-    .btn-step { background: #fff; border: 1px solid #ccc; width: 28px; height: 28px; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-    .step-val { font-size: 14px; font-weight: bold; }
-    .footer-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #ddd; padding: 12px 20px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 100; }
-    .footer-content { max-width: 600px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
-    .total-price { font-size: 18px; font-weight: bold; color: #d32f2f; }
-    .btn-submit { background: #25d366; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; }
-    .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { background-color: #f6f6f9; color: #333; padding-bottom: 90px; }
+
+    /* 頂部門市卡片 */
+    .store-header { background: linear-gradient(135deg, #1e1e24, #2a2a36); color: #fff; padding: 20px 16px 16px; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .store-name { font-size: 22px; font-weight: bold; color: #ff4d4f; display: flex; align-items: center; gap: 8px; }
+    .store-info { font-size: 12px; color: #aaa; margin-top: 6px; display: flex; flex-direction: column; gap: 3px; }
+    .order-type-toggle { display: flex; background: rgba(255,255,255,0.1); padding: 4px; border-radius: 8px; margin-top: 14px; }
+    .type-btn { flex: 1; border: none; background: transparent; color: #aaa; padding: 8px 0; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; text-align: center; }
+    .type-btn.active { background: #ff4d4f; color: #fff; }
+
+    /* 吸頂分類選單 */
+    .category-bar { position: sticky; top: 0; background: #fff; display: flex; overflow-x: auto; white-space: nowrap; padding: 10px 12px; gap: 8px; border-bottom: 1px solid #eee; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+    .category-bar::-webkit-scrollbar { display: none; }
+    .cat-item { background: #f0f0f4; color: #666; border: none; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; }
+    .cat-item.active { background: #ff4d4f; color: #fff; }
+
+    /* 餐點列表 */
+    .menu-container { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+    .menu-item { background: #fff; border-radius: 12px; padding: 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+    .item-detail { flex: 1; padding-right: 12px; }
+    .item-title { font-weight: bold; font-size: 16px; color: #222; }
+    .item-price { font-weight: bold; color: #ff4d4f; font-size: 15px; margin-top: 4px; }
+    .btn-add { background: #ff4d4f; color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(255,77,79,0.3); }
+
+    /* 懸浮購物車條 */
+    .float-cart { position: fixed; bottom: 16px; left: 16px; right: 16px; background: #22222a; color: #fff; border-radius: 30px; padding: 10px 18px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 8px 24px rgba(0,0,0,0.25); z-index: 99; }
+    .cart-info { display: flex; align-items: center; gap: 12px; }
+    .cart-badge { background: #ff4d4f; color: #fff; font-size: 12px; font-weight: bold; padding: 2px 8px; border-radius: 12px; }
+    .cart-price { font-size: 18px; font-weight: bold; color: #fff; }
+    .btn-checkout-modal { background: #ff4d4f; color: #fff; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; font-size: 14px; cursor: pointer; }
+
+    /* 結帳與追蹤 Modal 彈窗 */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: flex-end; z-index: 1000; }
+    .modal-overlay.active { display: flex; }
+    .modal-card { background: #fff; width: 100%; max-width: 500px; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px; max-height: 85vh; overflow-y: auto; animation: slideUp 0.25s ease-out; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 12px; margin-bottom: 14px; }
+    .modal-title { font-size: 18px; font-weight: bold; }
+    .close-btn { background: none; border: none; font-size: 22px; color: #aaa; cursor: pointer; }
+
+    /* 表單元件 */
+    .form-group { margin-bottom: 14px; }
+    .form-label { font-size: 13px; font-weight: bold; color: #555; margin-bottom: 6px; display: block; }
+    .form-input, .form-select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
+    .form-input:focus, .form-select:focus { border-color: #ff4d4f; }
+
+    .cart-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 14px; }
+    .qty-btn { width: 26px; height: 26px; border-radius: 4px; border: 1px solid #ddd; background: #fff; font-weight: bold; cursor: pointer; }
+
+    /* 訂單狀態追蹤樣式 */
+    .status-box { text-align: center; padding: 20px 0; }
+    .status-icon { font-size: 48px; margin-bottom: 10px; }
+    .status-title { font-size: 20px; font-weight: bold; margin-bottom: 6px; }
+    .status-desc { font-size: 13px; color: #666; margin-bottom: 20px; }
+    .timeline { display: flex; justify-content: space-between; position: relative; margin: 20px 0; }
+    .timeline::before { content: ''; position: absolute; top: 12px; left: 10%; right: 10%; height: 2px; background: #eee; z-index: 1; }
+    .step { position: relative; z-index: 2; background: #fff; padding: 0 8px; text-align: center; }
+    .step-dot { width: 24px; height: 24px; border-radius: 50%; background: #ddd; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; margin: 0 auto 6px; font-weight: bold; }
+    .step.active .step-dot { background: #ff4d4f; }
+    .step.active .step-text { color: #ff4d4f; font-weight: bold; }
+    .step-text { font-size: 12px; color: #888; }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <div class="header">
-    <h1>米福壽司</h1>
-    <p>線上點餐系統．現點現做新鮮美味</p>
+<div class="store-header">
+  <div class="store-name">🍣 米福壽司 (線上點餐)</div>
+  <div class="store-info">
+    <span>📍 門市地址：南投縣草屯鎮 (預設門市)</span>
+    <span>⏰ 營業時間：11:00 - 20:30 (每週一公休)</span>
   </div>
-
-  <div class="card">
-    <div class="card-title">1. 取餐與訂購資訊</div>
-    <div class="form-group">
-      <label>取餐方式 *</label>
-      <div class="radio-group">
-        <input type="radio" id="type_takeout" name="orderType" value="外帶" checked onclick="toggleTypeFields()">
-        <label for="type_takeout" class="radio-label">現場外帶</label>
-        <input type="radio" id="type_reserve" name="orderType" value="預約取餐" onclick="toggleTypeFields()">
-        <label for="type_reserve" class="radio-label">預約取餐</label>
-        <input type="radio" id="type_delivery" name="orderType" value="外送" onclick="toggleTypeFields()">
-        <label for="type_delivery" class="radio-label">外送服務</label>
-      </div>
-    </div>
-    <div class="form-group">
-      <label for="custName">訂購人姓名 *</label>
-      <input type="text" id="custName" class="form-control" placeholder="請輸入您的姓名">
-    </div>
-    <div class="form-group">
-      <label for="custPhone">聯絡電話 *</label>
-      <input type="tel" id="custPhone" class="form-control" placeholder="請輸入手機號碼">
-    </div>
-    <div class="form-group" id="timeGroup" style="display: none;">
-      <label for="pickupTime">預約取餐/送達時間 *</label>
-      <input type="time" id="pickupTime" class="form-control">
-    </div>
-    <div class="form-group" id="addressGroup" style="display: none;">
-      <label for="custAddress">外送地址 *</label>
-      <input type="text" id="custAddress" class="form-control" placeholder="請輸入完整外送地址">
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">2. 醬料選擇與備註</div>
-    <div style="display: flex; gap: 15px; margin-bottom: 10px;">
-      <div class="form-group" style="flex: 1;">
-        <label for="wasabiQty">芥末包數量</label>
-        <select id="wasabiQty" class="form-control">
-          <option value="正常 (依餐點附贈)">正常 (依餐點附贈)</option>
-          <option value="多一點">多一點</option>
-          <option value="不需要">不需要</option>
-        </select>
-      </div>
-      <div class="form-group" style="flex: 1;">
-        <label for="soyQty">醬油包數量</label>
-        <select id="soyQty" class="form-control">
-          <option value="正常 (依餐點附贈)">正常 (依餐點附贈)</option>
-          <option value="多一點">多一點</option>
-          <option value="不需要">不需要</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-group">
-      <label for="orderNote">訂單備註</label>
-      <textarea id="orderNote" class="form-control" rows="2" placeholder="例如：不要蔥、炙燒焦糖多一點等需求"></textarea>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">3. 絕妙 10 元壽司區</div>
-    <div class="menu-grid" id="menu10"></div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">4. 炙燒與上品 15 元區</div>
-    <div class="menu-grid" id="menu15"></div>
+  <div class="order-type-toggle">
+    <button class="type-btn active" id="btnTakeout" onclick="setOrderType('線上預訂', this)">🥡 外帶自取</button>
+    <button class="type-btn" id="btnDelivery" onclick="setOrderType('線上外送', this)">🛵 店家外送</button>
   </div>
 </div>
 
-<div class="footer-bar">
-  <div class="footer-content">
-    <div>
-      <span style="font-size: 12px; color: #666;">共 <span id="totalCount">0</span> 件餐點</span>
-      <div class="total-price">總計: $<span id="totalPrice">0</span></div>
+<div class="category-bar">
+  <button class="cat-item active" onclick="filterCategory('ALL', this)">全部餐點</button>
+  <button class="cat-item" onclick="filterCategory('握壽司', this)">握壽司/肉類</button>
+  <button class="cat-item" onclick="filterCategory('炙燒', this)">炙燒特選</button>
+  <button class="cat-item" onclick="filterCategory('沙拉', this)">沙拉/小菜</button>
+</div>
+
+<div class="menu-container" id="menuContainer"></div>
+
+<div class="float-cart" id="floatCart" style="display: none;">
+  <div class="cart-info">
+    <span class="cart-badge" id="cartBadgeCount">0 件</span>
+    <span class="cart-price" id="cartPriceTotal">$0</span>
+  </div>
+  <button class="btn-checkout-modal" onclick="openCheckoutModal()">查看購物車 / 結帳</button>
+</div>
+
+<div class="modal-overlay" id="checkoutModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">🛒 訂單明細與資料</div>
+      <button class="close-btn" onclick="closeModal('checkoutModal')">&times;</button>
     </div>
-    <button id="submitBtn" class="btn-submit" onclick="submitOrder()">送出訂單 (寫入雲端 & LINE)</button>
+
+    <div id="modalCartItems" style="margin-bottom: 15px;"></div>
+
+    <div class="form-group">
+      <label class="form-label">預計取餐時間</label>
+      <select class="form-select" id="custTime">
+        <option value="儘快取餐 (約15-20分鐘)">儘快取餐 (約 15-20 分鐘)</option>
+        <option value="30分鐘後">30 分鐘後</option>
+        <option value="45分鐘後">45 分鐘後</option>
+        <option value="60分鐘後">60 分鐘後</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">訂購人姓名 *</label>
+      <input type="text" class="form-input" id="custName" placeholder="例如：陳先生 / 林小姐">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">手機號碼 *</label>
+      <input type="tel" class="form-input" id="custPhone" placeholder="例如：0912345678">
+    </div>
+
+    <div style="display: flex; gap: 10px;">
+      <div class="form-group" style="flex:1;">
+        <label class="form-label">芥末需求</label>
+        <select class="form-select" id="custWasabi">
+          <option value="正常">正常</option>
+          <option value="多">多</option>
+          <option value="少">少</option>
+          <option value="不要">不要</option>
+        </select>
+      </div>
+      <div class="form-group" style="flex:1;">
+        <label class="form-label">醬油需求</label>
+        <select class="form-select" id="custSoy">
+          <option value="正常">正常</option>
+          <option value="多">多</option>
+          <option value="少">少</option>
+          <option value="不要">不要</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">付款方式</label>
+      <input type="text" class="form-input" value="💵 現場取餐付款 (現金)" disabled style="background:#f5f5f5;">
+    </div>
+
+    <button style="width:100%; background:#ff4d4f; color:#fff; border:none; padding:14px; border-radius:10px; font-weight:bold; font-size:16px; cursor:pointer; margin-top:10px;" onclick="submitOnlineOrder()">確認送出訂單</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="trackingModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">📋 訂單即時進度</div>
+      <button class="close-btn" onclick="closeModal('trackingModal')">&times;</button>
+    </div>
+
+    <div class="status-box">
+      <div class="status-icon" id="statusIcon">⏳</div>
+      <div class="status-title" id="statusTitle">訂單已送出，等待店家接單</div>
+      <div class="status-desc" id="statusDesc">店家已收到您的訂單通知，請稍候...</div>
+
+      <div class="timeline">
+        <div class="step active" id="step1">
+          <div class="step-dot">1</div>
+          <div class="step-text">已送出</div>
+        </div>
+        <div class="step" id="step2">
+          <div class="step-dot">2</div>
+          <div class="step-text">製作中</div>
+        </div>
+        <div class="step" id="step3">
+          <div class="step-dot">3</div>
+          <div class="step-text">可取餐</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:#f9f9fc; border-radius:10px; padding:12px; font-size:13px; color:#555;" id="trackingDetail">
+      </div>
+
+    <button style="width:100%; background:#333; color:#fff; border:none; padding:12px; border-radius:8px; font-weight:bold; font-size:14px; margin-top:15px; cursor:pointer;" onclick="closeModal('trackingModal')">回到菜單頁面</button>
   </div>
 </div>
 
 <script>
-  // 初始化 Supabase
   const SUPABASE_URL = 'https://fnpkpxmswnsqsjsdpcdc.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_m7MorN4F4WnGngacYoqSWQ_fPP0zVyv';
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  const items10Data = [
-    { name: "1.煙燻鮭魚", price: 10, img: "1.jpg" }, { name: "2.黃金魚片", price: 10, img: "2.jpg" },
-    { name: "3.原味花枝", price: 10, img: "3.jpg" }, { name: "4.原味章魚", price: 10, img: "4.jpg" },
-    { name: "5.鮮蝦沙拉", price: 10, img: "5.jpg" }, { name: "6.照燒雞腿", price: 10, img: "6.jpg" },
-    { name: "7.櫻桃鴨肉", price: 10, img: "7.jpg" }, { name: "8.鮑魚沙拉", price: 10, img: "8.jpg" },
-    { name: "9.黑胡椒牛", price: 10, img: "9.jpg" }, { name: "10.起司魚卵", price: 10, img: "10.jpg" },
-    { name: "11.起司火腿", price: 10, img: "11.jpg" }, { name: "12.玉子燒", price: 10, img: "12.jpg" },
-    { name: "13.蒲燒鯛魚", price: 10, img: "13.jpg" }, { name: "14.豆皮壽司", price: 10, img: "14.jpg" },
-    { name: "15.蟹肉沙拉", price: 10, img: "15.jpg" }, { name: "16.珍味蝦卵", price: 10, img: "16.jpg" },
-    { name: "17.珍味魚卵", price: 10, img: "17.jpg" }, { name: "18.海帶芽", price: 10, img: "18.jpg" },
-    { name: "19.玉米沙拉", price: 10, img: "19.jpg" }, { name: "20.鮪魚沙拉", price: 10, img: "20.jpg" },
-    { name: "21.肉鬆沙拉", price: 10, img: "21.jpg" }, { name: "22.魚卵沙拉", price: 10, img: "22.jpg" },
-    { name: "23.干貝唇", price: 10, img: "23.jpg" }, { name: "24.龍蝦沙拉", price: 10, img: "24.jpg" },
-    { name: "25.味付雪貝", price: 10, img: "25.jpg" }, { name: "26.蟹肉棒", price: 10, img: "26.jpg" },
-    { name: "27.辣味螺肉", price: 10, img: "27.jpg" }, { name: "28.海瓜子", price: 10, img: "28.jpg" },
-    { name: "29.海鮮沙拉", price: 10, img: "29.jpg" }, { name: "30.泡菜花枝", price: 10, img: "30.jpg" }
+  // 菜單資料
+  const menuList = [
+    { name: '1.煙燻鮭魚', price: 20, cat: '握壽司' },
+    { name: '5.鮮蝦沙拉', price: 20, cat: '沙拉' },
+    { name: '7.櫻花鴨肉', price: 30, cat: '握壽司' },
+    { name: '26.蟹肉棒', price: 30, cat: '握壽司' },
+    { name: 'B6.焗烤玉子燒', price: 60, cat: '炙燒' },
+    { name: 'B7.炙燒龍蝦沙拉', price: 45, cat: '炙燒' },
+    { name: 'B10.魚蛋沙拉', price: 75, cat: '沙拉' }
   ];
 
-  const items15Data = [
-    { name: "A1.生鮭魚", price: 15, img: "A1.jpg" }, { name: "A2.生鯛魚", price: 15, img: "A2.jpg" },
-    { name: "A3.生鮪魚", price: 15, img: "A3.jpg" }, { name: "A4.生鮭魚肚", price: 15, img: "A4.jpg" },
-    { name: "A5.大蝦沙拉", price: 15, img: "A5.jpg" }, { name: "A6.起司蟹棒", price: 15, img: "A6.jpg" },
-    { name: "A7.明太子蝦", price: 15, img: "A7.jpg" }, { name: "B1.炙燒鮭魚肚", price: 15, img: "B1.jpg" },
-    { name: "B2.炙燒牛肉", price: 15, img: "B2.jpg" }, { name: "B3.焗烤雞腿肉", price: 15, img: "B3.jpg" },
-    { name: "B4.焗烤蝦", price: 15, img: "B4.jpg" }, { name: "B5.焗烤章魚燒", price: 15, img: "B5.jpg" },
-    { name: "B6.焗烤玉子燒", price: 15, img: "B6.jpg" }, { name: "B7.炙燒龍蝦沙拉", price: 15, img: "B7.jpg" },
-    { name: "B8.炙燒鯛魚", price: 15, img: "B8.jpg" }, { name: "B9.鳳梨蝦球", price: 15, img: "B9.jpg" },
-    { name: "B10.魚蛋沙拉", price: 15, img: "B10.jpg" }
-  ];
+  let cart = {};
+  let selectedOrderType = '線上預訂';
+  let currentOrderId = null;
+  let orderRealtimeChannel = null;
 
-  const orderState = {};
-
-  function renderMenu() {
-    document.getElementById('menu10').innerHTML = items10Data.map(item => createItemHTML(item)).join('');
-    document.getElementById('menu15').innerHTML = items15Data.map(item => createItemHTML(item)).join('');
+  function setOrderType(type, btn) {
+    selectedOrderType = type;
+    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
   }
 
-  function createItemHTML(item) {
-    const defaultImg = "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=300&q=80";
-    return `
-      <div class="item-card">
-        <img src="${item.img}" alt="${item.name}" class="item-img" onerror="this.onerror=null;this.src='${defaultImg}';">
-        <div>
-          <div class="item-name">${item.name}</div>
-          <div class="item-price">$${item.price} / 貫</div>
+  function renderMenu(catFilter = 'ALL') {
+    const container = document.getElementById('menuContainer');
+    const filtered = catFilter === 'ALL' ? menuList : menuList.filter(item => item.cat === catFilter);
+
+    container.innerHTML = filtered.map(item => `
+      <div class="menu-item">
+        <div class="item-detail">
+          <div class="item-title">${item.name}</div>
+          <div class="item-price">$${item.price}</div>
         </div>
-        <div class="stepper">
-          <button class="btn-step" onclick="updateQty('${item.name}', ${item.price}, -1)">-</button>
-          <span class="step-val" id="qty_${item.name}">0</span>
-          <button class="btn-step" onclick="updateQty('${item.name}', ${item.price}, 1)">+</button>
-        </div>
+        <button class="btn-add" onclick="addToCart('${item.name}')">+</button>
       </div>
+    `).join('');
+  }
+
+  function filterCategory(cat, btn) {
+    document.querySelectorAll('.cat-item').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderMenu(cat);
+  }
+
+  function addToCart(name) {
+    cart[name] = (cart[name] || 0) + 1;
+    updateFloatCart();
+  }
+
+  function changeCartQty(name, delta) {
+    if (!cart[name]) return;
+    cart[name] += delta;
+    if (cart[name] <= 0) delete cart[name];
+    updateFloatCart();
+    renderModalCartItems();
+  }
+
+  function updateFloatCart() {
+    const entries = Object.entries(cart);
+    let totalQty = 0;
+    let totalPrice = 0;
+
+    entries.forEach(([name, qty]) => {
+      const item = menuList.find(m => m.name === name);
+      if (item) {
+        totalQty += qty;
+        totalPrice += item.price * qty;
+      }
+    });
+
+    const floatCart = document.getElementById('floatCart');
+    if (totalQty > 0) {
+      floatCart.style.display = 'flex';
+      document.getElementById('cartBadgeCount').innerText = `${totalQty} 件`;
+      document.getElementById('cartPriceTotal').innerText = `$${totalPrice}`;
+    } else {
+      floatCart.style.display = 'none';
+    }
+  }
+
+  function openCheckoutModal() {
+    renderModalCartItems();
+    document.getElementById('checkoutModal').classList.add('active');
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+  }
+
+  function renderModalCartItems() {
+    const container = document.getElementById('modalCartItems');
+    const entries = Object.entries(cart);
+
+    if (entries.length === 0) {
+      container.innerHTML = '<div style="text-align:center; color:#888; padding:20px;">購物車空空如也</div>';
+      closeModal('checkoutModal');
+      return;
+    }
+
+    let total = 0;
+    container.innerHTML = entries.map(([name, qty]) => {
+      const item = menuList.find(m => m.name === name);
+      const sub = item.price * qty;
+      total += sub;
+
+      return `
+        <div class="cart-list-item">
+          <div><b>${name}</b> <span style="color:#888; font-size:12px;">($${item.price})</span></div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button class="qty-btn" onclick="changeCartQty('${name}', -1)">-</button>
+            <span>${qty}</span>
+            <button class="qty-btn" onclick="changeCartQty('${name}', 1)">+</button>
+            <span style="font-weight:bold; color:#ff4d4f; min-width:45px; text-align:right;">$${sub}</span>
+          </div>
+        </div>
+      `;
+    }).join('') + `<div style="text-align:right; font-weight:bold; font-size:16px; margin-top:10px; color:#ff4d4f;">合計：$${total}</div>`;
+  }
+
+  // 送出線上訂單
+  async function submitOnlineOrder() {
+    const name = document.getElementById('custName').value.trim();
+    const phone = document.getElementById('custPhone').value.trim();
+    const time = document.getElementById('custTime').value;
+    const wasabi = document.getElementById('custWasabi').value;
+    const soy = document.getElementById('custSoy').value;
+
+    if (!name || !phone) {
+      alert('請填寫姓名與手機號碼！');
+      return;
+    }
+
+    const entries = Object.entries(cart);
+    let totalPrice = 0;
+    entries.forEach(([n, q]) => {
+      const found = menuList.find(m => m.name === n);
+      if (found) totalPrice += found.price * q;
+    });
+
+    // 1. 寫入 orders 主表
+    const { data: order, error } = await supabaseClient
+      .from('orders')
+      .insert([{
+        customer_name: `${name} (${time})`,
+        customer_phone: phone,
+        order_type: selectedOrderType,
+        status: 'Pending',
+        total_price: totalPrice,
+        wasabi: wasabi,
+        soy_sauce: soy
+      }])
+      .select().single();
+
+    if (error) {
+      alert('訂單送出失敗：' + error.message);
+      return;
+    }
+
+    // 2. 寫入 order_items 細項表
+    const itemsToInsert = entries.map(([n, q]) => {
+      const found = menuList.find(m => m.name === n);
+      return { order_id: order.id, item_name: n, quantity: q, price: found ? found.price : 0 };
+    });
+
+    await supabaseClient.from('order_items').insert(itemsToInsert);
+
+    // 3. 清空購物車與切換畫面
+    currentOrderId = order.id;
+    cart = {};
+    updateFloatCart();
+    closeModal('checkoutModal');
+
+    // 開啟狀態追蹤 Modal
+    openTrackingModal(order, itemsToInsert);
+    listenOrderStatus(order.id);
+  }
+
+  function openTrackingModal(order, items) {
+    document.getElementById('trackingModal').classList.add('active');
+    updateTrackingUI(order.status);
+
+    const itemsText = items.map(i => `${i.item_name} x ${i.quantity}`).join('、');
+    document.getElementById('trackingDetail').innerHTML = `
+      <div><b>訂單編號：</b> #${order.id.substring(0, 8)}</div>
+      <div><b>取餐時間：</b> ${document.getElementById('custTime').value}</div>
+      <div><b>餐點明細：</b> ${itemsText}</div>
+      <div><b>應付金額：</b> <span style="color:#ff4d4f; font-weight:bold;">$${order.total_price}</span> (取餐付款)</div>
     `;
   }
 
-  function updateQty(name, price, change) {
-    if (!orderState[name]) orderState[name] = { price: price, qty: 0 };
-    orderState[name].qty += change;
-    if (orderState[name].qty < 0) orderState[name].qty = 0;
-    document.getElementById(`qty_${name}`).innerText = orderState[name].qty;
-    calculateTotal();
+  // 即時監聽訂單狀態變更 (Supabase Realtime)
+  function listenOrderStatus(orderId) {
+    if (orderRealtimeChannel) supabaseClient.removeChannel(orderRealtimeChannel);
+
+    orderRealtimeChannel = supabaseClient
+      .channel(`order-status-${orderId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'orders',
+        filter: `id=eq.${orderId}`
+      }, (payload) => {
+        if (payload.new && payload.new.status) {
+          updateTrackingUI(payload.new.status);
+        }
+      })
+      .subscribe();
   }
 
-  function calculateTotal() {
-    let totalCount = 0, totalPrice = 0;
-    for (const key in orderState) {
-      totalCount += orderState[key].qty;
-      totalPrice += orderState[key].qty * orderState[key].price;
-    }
-    document.getElementById('totalCount').innerText = totalCount;
-    document.getElementById('totalPrice').innerText = totalPrice;
-  }
+  function updateTrackingUI(status) {
+    const icon = document.getElementById('statusIcon');
+    const title = document.getElementById('statusTitle');
+    const desc = document.getElementById('statusDesc');
 
-  function toggleTypeFields() {
-    const type = document.querySelector('input[name="orderType"]:checked').value;
-    document.getElementById('addressGroup').style.display = (type === '外送') ? 'block' : 'none';
-    document.getElementById('timeGroup').style.display = (type === '外送' || type === '預約取餐') ? 'block' : 'none';
-  }
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+    const step3 = document.getElementById('step3');
 
-  async function submitOrder() {
-    const name = document.getElementById('custName').value.trim();
-    const phone = document.getElementById('custPhone').value.trim();
-    const type = document.querySelector('input[name="orderType"]:checked').value;
-    const time = document.getElementById('pickupTime').value;
-    const address = document.getElementById('custAddress').value.trim();
-    const wasabi = document.getElementById('wasabiQty').value;
-    const soy = document.getElementById('soyQty').value;
-    const note = document.getElementById('orderNote').value.trim();
+    step1.classList.add('active');
+    step2.classList.remove('active');
+    step3.classList.remove('active');
 
-    if (!name || !phone) return alert('請填寫姓名與聯絡電話！');
-    if (type === '外送' && !address) return alert('請填寫外送地址！');
-    if ((type === '預約取餐' || type === '外送') && !time) return alert('請選擇預約取餐/送達時間！');
-
-    let totalCount = 0, totalPrice = 0;
-    const itemsList = [];
-    for (const key in orderState) {
-      if (orderState[key].qty > 0) {
-        itemsList.push({ name: key, price: orderState[key].price, qty: orderState[key].qty });
-        totalCount += orderState[key].qty;
-        totalPrice += orderState[key].qty * orderState[key].price;
-      }
-    }
-    if (totalCount === 0) return alert('請至少選擇一項餐點！');
-
-    const submitBtn = document.getElementById('submitBtn');
-    submitBtn.disabled = true;
-    submitBtn.innerText = '處理中...';
-
-    try {
-      // 1. 寫入 Supabase 訂單主表
-      const { data: orderData, error: orderError } = await supabaseClient
-        .from('orders')
-        .insert([{
-          customer_name: name,
-          customer_phone: phone,
-          order_type: type,
-          pickup_time: time || null,
-          address: address || null,
-          wasabi: wasabi,
-          soy_sauce: soy,
-          note: note || null,
-          total_price: totalPrice,
-          status: 'Pending'
-        }])
-        .select();
-
-      if (orderError) throw orderError;
-
-      // 2. 寫入 Supabase 訂單明細表
-      const orderId = orderData[0].id;
-      const orderItemsToInsert = itemsList.map(i => ({
-        order_id: orderId,
-        item_name: i.name,
-        price: i.price,
-        quantity: i.qty
-      }));
-
-      const { error: itemsError } = await supabaseClient.from('order_items').insert(orderItemsToInsert);
-      if (itemsError) throw itemsError;
-
-      // 3. 組成 LINE 訊息並開啟跳轉
-      let itemsText = itemsList.map(i => `• ${i.name} x ${i.qty}`).join('\n');
-      let message = `🍣【米福壽司 - 線上點餐】\n--------------------\n● 訂購人：${name}\n● 電話：${phone}\n● 類別：${type}\n`;
-      if (time) message += `● 時間：${time}\n`;
-      if (address) message += `● 地址：${address}\n`;
-      message += `--------------------\n● 芥末：${wasabi}\n● 醬油：${soy}\n`;
-      if (note) message += `● 備註：${note}\n`;
-      message += `--------------------\n【訂購明細】\n${itemsText}\n--------------------\n● 總計品項：${totalCount} 貫\n● 應付金額：$${totalPrice} 元`;
-
-      window.location.href = `https://line.me/R/msg/text/?${encodeURIComponent(message)}`;
-
-    } catch (err) {
-      alert('訂單建立失敗：' + err.message);
-      submitBtn.disabled = false;
-      submitBtn.innerText = '送出訂單 (寫入雲端 & LINE)';
+    if (status === 'Pending') {
+      icon.innerText = '⏳';
+      title.innerText = '訂單已送出，等待店家接單';
+      desc.innerText = '米福壽司已收到您的訂單通知，正在確認中...';
+    } else if (status === 'Accepted') {
+      icon.innerText = '👨‍🍳';
+      title.innerText = '店家已接單，正在製作中';
+      desc.innerText = '主廚正在為您準備美味的壽司，請依時間前往取餐！';
+      step2.classList.add('active');
+    } else if (status === 'Completed') {
+      icon.innerText = '🎉';
+      title.innerText = '餐點已製作完成！';
+      desc.innerText = '請前往米福壽司櫃檯出示手機畫面即可取餐付款囉！';
+      step2.classList.add('active');
+      step3.classList.add('active');
+    } else if (status === 'Cancelled') {
+      icon.innerText = '❌';
+      title.innerText = '訂單已取消';
+      desc.innerText = '若有疑問請直接來電門市洽詢。';
     }
   }
 
-  renderMenu();
+  // 初始化
+  renderMenu('ALL');
 </script>
 </body>
 </html>
