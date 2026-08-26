@@ -56,12 +56,10 @@
     .cart-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 14px; }
     .qty-btn { width: 26px; height: 26px; border-radius: 4px; border: 1px solid #ddd; background: #fff; font-weight: bold; cursor: pointer; }
 
-    /* 口味選擇彈窗專用 */
     .option-btn-group { display: flex; gap: 10px; margin-top: 15px; }
     .btn-opt-choice { flex: 1; padding: 12px; border: 1px solid #ff4d4f; background: #fff; color: #ff4d4f; font-weight: bold; font-size: 15px; border-radius: 8px; cursor: pointer; }
     .btn-opt-choice:active { background: #ff4d4f; color: #fff; }
 
-    /* 追蹤樣式 */
     .status-box { text-align: center; padding: 20px 0; }
     .status-icon { font-size: 48px; margin-bottom: 10px; }
     .status-title { font-size: 20px; font-weight: bold; margin-bottom: 6px; }
@@ -80,8 +78,8 @@
 <div class="store-header">
   <div class="store-name">🍣 米福壽司 (線上點餐)</div>
   <div class="store-info">
-    <span>📍 門市地址：南投縣草屯鎮</span>
-    <span>⏰ 營業時間：11:00 - 20:30 (每週一公休)</span>
+    <span>📍 門市地址：南投縣草屯鎮虎山路832號</span>
+    <span>⏰ 營業時間：11:00 - 20:00 (每週一公休)</span>
   </div>
   <div class="order-type-toggle">
     <button class="type-btn active" id="btnTakeout" onclick="setOrderType('線上預訂', this)">🥡 外帶自取</button>
@@ -186,7 +184,6 @@
   const SUPABASE_KEY = 'sb_publishable_m7MorN4F4WnGngacYoqSWQ_fPP0zVyv';
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // 完整 47 項菜單陣列
   const menuList = [
     { name: '1.煙燻鮭魚', price: 10, cat: '10元壽司' },
     { name: '2.黃金魚片', price: 10, cat: '10元壽司' },
