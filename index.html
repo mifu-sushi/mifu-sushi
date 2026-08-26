@@ -24,11 +24,12 @@
     .cat-item.active { background: #ff4d4f; color: #fff; }
 
     /* 餐點列表 */
-    .menu-container { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
-    .menu-item { background: #fff; border-radius: 12px; padding: 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+    .menu-container { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+    .menu-item { background: #fff; border-radius: 12px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
     .item-detail { flex: 1; padding-right: 12px; }
-    .item-title { font-weight: bold; font-size: 16px; color: #222; }
-    .item-price { font-weight: bold; color: #ff4d4f; font-size: 15px; margin-top: 4px; }
+    .item-title { font-weight: bold; font-size: 15px; color: #222; }
+    .item-price { font-weight: bold; color: #ff4d4f; font-size: 14px; margin-top: 2px; }
+    .item-tag { font-size: 11px; background: #fff0f6; color: #eb2f96; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
     .btn-add { background: #ff4d4f; color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(255,77,79,0.3); }
 
     /* 懸浮購物車條 */
@@ -38,7 +39,7 @@
     .cart-price { font-size: 18px; font-weight: bold; color: #fff; }
     .btn-checkout-modal { background: #ff4d4f; color: #fff; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; font-size: 14px; cursor: pointer; }
 
-    /* 結帳與追蹤 Modal 彈窗 */
+    /* Modal 彈窗 */
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: flex-end; z-index: 1000; }
     .modal-overlay.active { display: flex; }
     .modal-card { background: #fff; width: 100%; max-width: 500px; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px; max-height: 85vh; overflow-y: auto; animation: slideUp 0.25s ease-out; }
@@ -48,16 +49,19 @@
     .modal-title { font-size: 18px; font-weight: bold; }
     .close-btn { background: none; border: none; font-size: 22px; color: #aaa; cursor: pointer; }
 
-    /* 表單元件 */
     .form-group { margin-bottom: 14px; }
     .form-label { font-size: 13px; font-weight: bold; color: #555; margin-bottom: 6px; display: block; }
     .form-input, .form-select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
-    .form-input:focus, .form-select:focus { border-color: #ff4d4f; }
 
     .cart-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 14px; }
     .qty-btn { width: 26px; height: 26px; border-radius: 4px; border: 1px solid #ddd; background: #fff; font-weight: bold; cursor: pointer; }
 
-    /* 訂單狀態追蹤樣式 */
+    /* 口味選擇彈窗專用 */
+    .option-btn-group { display: flex; gap: 10px; margin-top: 15px; }
+    .btn-opt-choice { flex: 1; padding: 12px; border: 1px solid #ff4d4f; background: #fff; color: #ff4d4f; font-weight: bold; font-size: 15px; border-radius: 8px; cursor: pointer; }
+    .btn-opt-choice:active { background: #ff4d4f; color: #fff; }
+
+    /* 追蹤樣式 */
     .status-box { text-align: center; padding: 20px 0; }
     .status-icon { font-size: 48px; margin-bottom: 10px; }
     .status-title { font-size: 20px; font-weight: bold; margin-bottom: 6px; }
@@ -76,7 +80,7 @@
 <div class="store-header">
   <div class="store-name">🍣 米福壽司 (線上點餐)</div>
   <div class="store-info">
-    <span>📍 門市地址：南投縣草屯鎮 (預設門市)</span>
+    <span>📍 門市地址：南投縣草屯鎮</span>
     <span>⏰ 營業時間：11:00 - 20:30 (每週一公休)</span>
   </div>
   <div class="order-type-toggle">
@@ -86,10 +90,9 @@
 </div>
 
 <div class="category-bar">
-  <button class="cat-item active" onclick="filterCategory('ALL', this)">全部餐點</button>
-  <button class="cat-item" onclick="filterCategory('握壽司', this)">握壽司/肉類</button>
-  <button class="cat-item" onclick="filterCategory('炙燒', this)">炙燒特選</button>
-  <button class="cat-item" onclick="filterCategory('沙拉', this)">沙拉/小菜</button>
+  <button class="cat-item active" onclick="filterCategory('ALL', this)">全部分類</button>
+  <button class="cat-item" onclick="filterCategory('10元壽司', this)">10元壽司</button>
+  <button class="cat-item" onclick="filterCategory('炙燒/生鮮', this)">15元炙燒與生鮮</button>
 </div>
 
 <div class="menu-container" id="menuContainer"></div>
@@ -102,15 +105,29 @@
   <button class="btn-checkout-modal" onclick="openCheckoutModal()">查看購物車 / 結帳</button>
 </div>
 
+<!-- Modal: 口味選擇彈窗 -->
+<div class="modal-overlay" id="optionModal">
+  <div class="modal-card" style="border-radius:20px; margin:auto 16px;">
+    <div class="modal-header">
+      <div class="modal-title" id="optModalTitle">請選擇風味</div>
+      <button class="close-btn" onclick="closeModal('optionModal')">&times;</button>
+    </div>
+    <div style="font-size:14px; color:#666;" id="optModalDesc">請選擇要火烤或是焦糖風味：</div>
+    <div class="option-btn-group">
+      <button class="btn-opt-choice" onclick="selectFlavor('火烤')">🔥 火烤</button>
+      <button class="btn-opt-choice" onclick="selectFlavor('焦糖')">🍯 焦糖</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: 購物車結帳 -->
 <div class="modal-overlay" id="checkoutModal">
   <div class="modal-card">
     <div class="modal-header">
       <div class="modal-title">🛒 訂單明細與資料</div>
       <button class="close-btn" onclick="closeModal('checkoutModal')">&times;</button>
     </div>
-
     <div id="modalCartItems" style="margin-bottom: 15px;"></div>
-
     <div class="form-group">
       <label class="form-label">預計取餐時間</label>
       <select class="form-select" id="custTime">
@@ -120,78 +137,46 @@
         <option value="60分鐘後">60 分鐘後</option>
       </select>
     </div>
-
     <div class="form-group">
       <label class="form-label">訂購人姓名 *</label>
       <input type="text" class="form-input" id="custName" placeholder="例如：陳先生 / 林小姐">
     </div>
-
     <div class="form-group">
       <label class="form-label">手機號碼 *</label>
       <input type="tel" class="form-input" id="custPhone" placeholder="例如：0912345678">
     </div>
-
     <div style="display: flex; gap: 10px;">
       <div class="form-group" style="flex:1;">
         <label class="form-label">芥末需求</label>
-        <select class="form-select" id="custWasabi">
-          <option value="正常">正常</option>
-          <option value="多">多</option>
-          <option value="少">少</option>
-          <option value="不要">不要</option>
-        </select>
+        <select class="form-select" id="custWasabi"><option value="正常">正常</option><option value="多">多</option><option value="少">少</option><option value="不要">不要</option></select>
       </div>
       <div class="form-group" style="flex:1;">
         <label class="form-label">醬油需求</label>
-        <select class="form-select" id="custSoy">
-          <option value="正常">正常</option>
-          <option value="多">多</option>
-          <option value="少">少</option>
-          <option value="不要">不要</option>
-        </select>
+        <select class="form-select" id="custSoy"><option value="正常">正常</option><option value="多">多</option><option value="少">少</option><option value="不要">不要</option></select>
       </div>
     </div>
-
-    <div class="form-group">
-      <label class="form-label">付款方式</label>
-      <input type="text" class="form-input" value="💵 現場取餐付款 (現金)" disabled style="background:#f5f5f5;">
-    </div>
-
     <button style="width:100%; background:#ff4d4f; color:#fff; border:none; padding:14px; border-radius:10px; font-weight:bold; font-size:16px; cursor:pointer; margin-top:10px;" onclick="submitOnlineOrder()">確認送出訂單</button>
   </div>
 </div>
 
+<!-- Modal: 訂單進度追蹤 -->
 <div class="modal-overlay" id="trackingModal">
   <div class="modal-card">
     <div class="modal-header">
       <div class="modal-title">📋 訂單即時進度</div>
       <button class="close-btn" onclick="closeModal('trackingModal')">&times;</button>
     </div>
-
     <div class="status-box">
       <div class="status-icon" id="statusIcon">⏳</div>
       <div class="status-title" id="statusTitle">訂單已送出，等待店家接單</div>
       <div class="status-desc" id="statusDesc">店家已收到您的訂單通知，請稍候...</div>
-
       <div class="timeline">
-        <div class="step active" id="step1">
-          <div class="step-dot">1</div>
-          <div class="step-text">已送出</div>
-        </div>
-        <div class="step" id="step2">
-          <div class="step-dot">2</div>
-          <div class="step-text">製作中</div>
-        </div>
-        <div class="step" id="step3">
-          <div class="step-dot">3</div>
-          <div class="step-text">可取餐</div>
-        </div>
+        <div class="step active" id="step1"><div class="step-dot">1</div><div class="step-text">已送出</div></div>
+        <div class="step" id="step2"><div class="step-dot">2</div><div class="step-text">製作中</div></div>
+        <div class="step" id="step3"><div class="step-dot">3</div><div class="step-text">可取餐</div></div>
       </div>
     </div>
-
-    <div style="background:#f9f9fc; border-radius:10px; padding:12px; font-size:13px; color:#555;" id="trackingDetail">
-      </div>
-
+    <div style="background:#f9f9fc; border-radius:10px; padding:12px; font-size:13px; color:#555;" id="trackingDetail"></div>
     <button style="width:100%; background:#333; color:#fff; border:none; padding:12px; border-radius:8px; font-weight:bold; font-size:14px; margin-top:15px; cursor:pointer;" onclick="closeModal('trackingModal')">回到菜單頁面</button>
   </div>
 </div>
@@ -201,20 +186,60 @@
   const SUPABASE_KEY = 'sb_publishable_m7MorN4F4WnGngacYoqSWQ_fPP0zVyv';
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // 菜單資料
+  // 完整 47 項菜單陣列
   const menuList = [
-    { name: '1.煙燻鮭魚', price: 20, cat: '握壽司' },
-    { name: '5.鮮蝦沙拉', price: 20, cat: '沙拉' },
-    { name: '7.櫻花鴨肉', price: 30, cat: '握壽司' },
-    { name: '26.蟹肉棒', price: 30, cat: '握壽司' },
-    { name: 'B6.焗烤玉子燒', price: 60, cat: '炙燒' },
-    { name: 'B7.炙燒龍蝦沙拉', price: 45, cat: '炙燒' },
-    { name: 'B10.魚蛋沙拉', price: 75, cat: '沙拉' }
+    { name: '1.煙燻鮭魚', price: 10, cat: '10元壽司' },
+    { name: '2.黃金魚片', price: 10, cat: '10元壽司' },
+    { name: '3.原味花枝', price: 10, cat: '10元壽司' },
+    { name: '4.原味章魚', price: 10, cat: '10元壽司' },
+    { name: '5.鮮蝦沙拉', price: 10, cat: '10元壽司' },
+    { name: '6.照燒雞腿', price: 10, cat: '10元壽司' },
+    { name: '7.櫻花鴨肉', price: 10, cat: '10元壽司' },
+    { name: '8.鮑魚沙拉', price: 10, cat: '10元壽司' },
+    { name: '9.黑胡椒牛', price: 10, cat: '10元壽司' },
+    { name: '10.起司魚卵', price: 10, cat: '10元壽司' },
+    { name: '11.起司火腿', price: 10, cat: '10元壽司' },
+    { name: '12.玉子燒', price: 10, cat: '10元壽司' },
+    { name: '13.蒲燒鯛魚', price: 10, cat: '10元壽司' },
+    { name: '14.豆皮壽司', price: 10, cat: '10元壽司' },
+    { name: '15.蟹肉沙拉', price: 10, cat: '10元壽司' },
+    { name: '16.珍味蝦卵', price: 10, cat: '10元壽司' },
+    { name: '17.珍味魚卵', price: 10, cat: '10元壽司' },
+    { name: '18.海帶芽', price: 10, cat: '10元壽司' },
+    { name: '19.玉米沙拉', price: 10, cat: '10元壽司' },
+    { name: '20.鮪魚沙拉', price: 10, cat: '10元壽司' },
+    { name: '21.肉鬆沙拉', price: 10, cat: '10元壽司' },
+    { name: '22.魚卵沙拉', price: 10, cat: '10元壽司' },
+    { name: '23.干貝唇', price: 10, cat: '10元壽司' },
+    { name: '24.龍蝦沙拉', price: 10, cat: '10元壽司' },
+    { name: '25.味付雪貝', price: 10, cat: '10元壽司' },
+    { name: '26.蟹肉棒', price: 10, cat: '10元壽司' },
+    { name: '27.辣味螺肉', price: 10, cat: '10元壽司' },
+    { name: '28.海瓜子', price: 10, cat: '10元壽司' },
+    { name: '29.海鮮沙拉', price: 10, cat: '10元壽司' },
+    { name: '30.泡菜花枝', price: 10, cat: '10元壽司' },
+    { name: 'A1.生鮭魚', price: 15, cat: '炙燒/生鮮' },
+    { name: 'A2.生鯛魚', price: 15, cat: '炙燒/生鮮' },
+    { name: 'A3.生鮪魚', price: 15, cat: '炙燒/生鮮' },
+    { name: 'A4.生鮭魚肚', price: 15, cat: '炙燒/生鮮' },
+    { name: 'A5.大蝦沙拉', price: 15, cat: '炙燒/生鮮' },
+    { name: 'A6.起司蟹棒', price: 15, cat: '炙燒/生鮮' },
+    { name: 'A7.明太子蝦', price: 15, cat: '炙燒/生鮮' },
+    { name: 'B1.炙燒鮭魚肚', price: 15, cat: '炙燒/生鮮', hasOptions: true },
+    { name: 'B2.焗烤牛肉', price: 15, cat: '炙燒/生鮮' },
+    { name: 'B3.焗烤雞腿肉', price: 15, cat: '炙燒/生鮮' },
+    { name: 'B4.焗烤蝦', price: 15, cat: '炙燒/生鮮' },
+    { name: 'B5.焗烤章魚燒', price: 15, cat: '炙燒/生鮮' },
+    { name: 'B6.焗烤玉子燒', price: 15, cat: '炙燒/生鮮' },
+    { name: 'B7.炙燒龍蝦沙拉', price: 15, cat: '炙燒/生鮮' },
+    { name: 'B8.炙燒鯛魚', price: 15, cat: '炙燒/生鮮', hasOptions: true },
+    { name: 'B9.鳳梨蝦球', price: 15, cat: '炙燒/生鮮' },
+    { name: 'B10.魚蛋沙拉', price: 15, cat: '炙燒/生鮮' }
   ];
 
   let cart = {};
   let selectedOrderType = '線上預訂';
-  let currentOrderId = null;
+  let pendingItemName = null;
   let orderRealtimeChannel = null;
 
   function setOrderType(type, btn) {
@@ -230,10 +255,13 @@
     container.innerHTML = filtered.map(item => `
       <div class="menu-item">
         <div class="item-detail">
-          <div class="item-title">${item.name}</div>
+          <div class="item-title">
+            ${item.name}
+            ${item.hasOptions ? '<span class="item-tag">火烤/焦糖可選</span>' : ''}
+          </div>
           <div class="item-price">$${item.price}</div>
         </div>
-        <button class="btn-add" onclick="addToCart('${item.name}')">+</button>
+        <button class="btn-add" onclick="handleAddToCart('${item.name}')">+</button>
       </div>
     `).join('');
   }
@@ -244,8 +272,28 @@
     renderMenu(cat);
   }
 
-  function addToCart(name) {
-    cart[name] = (cart[name] || 0) + 1;
+  function handleAddToCart(name) {
+    const item = menuList.find(m => m.name === name);
+    if (item && item.hasOptions) {
+      pendingItemName = name;
+      document.getElementById('optModalTitle').innerText = `選擇【${name}】風味`;
+      document.getElementById('optionModal').classList.add('active');
+    } else {
+      addToCart(name);
+    }
+  }
+
+  function selectFlavor(flavor) {
+    if (pendingItemName) {
+      const fullName = `${pendingItemName} (${flavor})`;
+      addToCart(fullName);
+      pendingItemName = null;
+    }
+    closeModal('optionModal');
+  }
+
+  function addToCart(fullName) {
+    cart[fullName] = (cart[fullName] || 0) + 1;
     updateFloatCart();
   }
 
@@ -262,8 +310,9 @@
     let totalQty = 0;
     let totalPrice = 0;
 
-    entries.forEach(([name, qty]) => {
-      const item = menuList.find(m => m.name === name);
+    entries.forEach(([fullName, qty]) => {
+      const baseName = fullName.split(' (')[0];
+      const item = menuList.find(m => m.name === baseName);
       if (item) {
         totalQty += qty;
         totalPrice += item.price * qty;
@@ -300,18 +349,19 @@
     }
 
     let total = 0;
-    container.innerHTML = entries.map(([name, qty]) => {
-      const item = menuList.find(m => m.name === name);
+    container.innerHTML = entries.map(([fullName, qty]) => {
+      const baseName = fullName.split(' (')[0];
+      const item = menuList.find(m => m.name === baseName);
       const sub = item.price * qty;
       total += sub;
 
       return `
         <div class="cart-list-item">
-          <div><b>${name}</b> <span style="color:#888; font-size:12px;">($${item.price})</span></div>
+          <div><b>${fullName}</b> <span style="color:#888; font-size:12px;">($${item.price})</span></div>
           <div style="display:flex; align-items:center; gap:8px;">
-            <button class="qty-btn" onclick="changeCartQty('${name}', -1)">-</button>
+            <button class="qty-btn" onclick="changeCartQty('${fullName}', -1)">-</button>
             <span>${qty}</span>
-            <button class="qty-btn" onclick="changeCartQty('${name}', 1)">+</button>
+            <button class="qty-btn" onclick="changeCartQty('${fullName}', 1)">+</button>
             <span style="font-weight:bold; color:#ff4d4f; min-width:45px; text-align:right;">$${sub}</span>
           </div>
         </div>
@@ -319,7 +369,6 @@
     }).join('') + `<div style="text-align:right; font-weight:bold; font-size:16px; margin-top:10px; color:#ff4d4f;">合計：$${total}</div>`;
   }
 
-  // 送出線上訂單
   async function submitOnlineOrder() {
     const name = document.getElementById('custName').value.trim();
     const phone = document.getElementById('custPhone').value.trim();
@@ -334,12 +383,12 @@
 
     const entries = Object.entries(cart);
     let totalPrice = 0;
-    entries.forEach(([n, q]) => {
-      const found = menuList.find(m => m.name === n);
+    entries.forEach(([fullName, q]) => {
+      const baseName = fullName.split(' (')[0];
+      const found = menuList.find(m => m.name === baseName);
       if (found) totalPrice += found.price * q;
     });
 
-    // 1. 寫入 orders 主表
     const { data: order, error } = await supabaseClient
       .from('orders')
       .insert([{
@@ -358,21 +407,17 @@
       return;
     }
 
-    // 2. 寫入 order_items 細項表
-    const itemsToInsert = entries.map(([n, q]) => {
-      const found = menuList.find(m => m.name === n);
-      return { order_id: order.id, item_name: n, quantity: q, price: found ? found.price : 0 };
+    const itemsToInsert = entries.map(([fullName, q]) => {
+      const baseName = fullName.split(' (')[0];
+      const found = menuList.find(m => m.name === baseName);
+      return { order_id: order.id, item_name: fullName, quantity: q, price: found ? found.price : 0 };
     });
 
     await supabaseClient.from('order_items').insert(itemsToInsert);
 
-    // 3. 清空購物車與切換畫面
-    currentOrderId = order.id;
     cart = {};
     updateFloatCart();
     closeModal('checkoutModal');
-
-    // 開啟狀態追蹤 Modal
     openTrackingModal(order, itemsToInsert);
     listenOrderStatus(order.id);
   }
@@ -390,21 +435,13 @@
     `;
   }
 
-  // 即時監聽訂單狀態變更 (Supabase Realtime)
   function listenOrderStatus(orderId) {
     if (orderRealtimeChannel) supabaseClient.removeChannel(orderRealtimeChannel);
 
     orderRealtimeChannel = supabaseClient
       .channel(`order-status-${orderId}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'orders',
-        filter: `id=eq.${orderId}`
-      }, (payload) => {
-        if (payload.new && payload.new.status) {
-          updateTrackingUI(payload.new.status);
-        }
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${orderId}` }, (payload) => {
+        if (payload.new && payload.new.status) updateTrackingUI(payload.new.status);
       })
       .subscribe();
   }
@@ -423,28 +460,16 @@
     step3.classList.remove('active');
 
     if (status === 'Pending') {
-      icon.innerText = '⏳';
-      title.innerText = '訂單已送出，等待店家接單';
-      desc.innerText = '米福壽司已收到您的訂單通知，正在確認中...';
+      icon.innerText = '⏳'; title.innerText = '訂單已送出，等待店家接單'; desc.innerText = '米福壽司已收到您的訂單通知，正在確認中...';
     } else if (status === 'Accepted') {
-      icon.innerText = '👨‍🍳';
-      title.innerText = '店家已接單，正在製作中';
-      desc.innerText = '主廚正在為您準備美味的壽司，請依時間前往取餐！';
-      step2.classList.add('active');
+      icon.innerText = '👨‍🍳'; title.innerText = '店家已接單，正在製作中'; desc.innerText = '主廚正在為您準備美味的壽司！'; step2.classList.add('active');
     } else if (status === 'Completed') {
-      icon.innerText = '🎉';
-      title.innerText = '餐點已製作完成！';
-      desc.innerText = '請前往米福壽司櫃檯出示手機畫面即可取餐付款囉！';
-      step2.classList.add('active');
-      step3.classList.add('active');
+      icon.innerText = '🎉'; title.innerText = '餐點已製作完成！'; desc.innerText = '請前往米福壽司櫃檯取餐付款囉！'; step2.classList.add('active'); step3.classList.add('active');
     } else if (status === 'Cancelled') {
-      icon.innerText = '❌';
-      title.innerText = '訂單已取消';
-      desc.innerText = '若有疑問請直接來電門市洽詢。';
+      icon.innerText = '❌'; title.innerText = '訂單已取消'; desc.innerText = '若有疑問請直接來電門市洽詢。';
     }
   }
 
-  // 初始化
   renderMenu('ALL');
 </script>
 </body>
